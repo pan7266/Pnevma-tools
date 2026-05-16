@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatLength, inchesToMm, mmToInches } from "../lib/units/convert";
+import { displayLengthValue, formatLength, inchesToMm, mmToInches, parseLengthValue } from "../lib/units/convert";
 import { validateSpotInputs } from "../lib/validation/spot-validation";
 import { spotDefaultValues } from "../lib/data/defaults";
 import type { SpotInputs } from "../types";
@@ -9,6 +9,12 @@ describe("unit conversion", () => {
     expect(mmToInches(25.4)).toBeCloseTo(1, 12);
     expect(inchesToMm(2)).toBeCloseTo(50.8, 12);
     expect(formatLength(25.4, "imperial", 2)).toBe("1 in");
+  });
+
+  it("keeps displayed length conversion reversible", () => {
+    const displayed = displayLengthValue(2.032, "imperial", 6);
+    expect(displayed).toBe("0.08");
+    expect(Number(parseLengthValue(displayed, "imperial"))).toBeCloseTo(2.032, 12);
   });
 });
 

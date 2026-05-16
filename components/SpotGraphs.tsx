@@ -3,7 +3,7 @@
 import { FINISHES } from "@/lib/data/finishes";
 import { FOCAL_LENGTHS, LENS_DIAMETERS } from "@/lib/data/lenses";
 import { calculateSpot, getFilteredSources } from "@/lib/calculators/spot";
-import { formatCompact, formatLength, formatNumber, formatOptionLength } from "@/lib/units/convert";
+import { formatCompact, formatLength, formatNumber, formatOptionLength, lengthUnit, mmToInches } from "@/lib/units/convert";
 import type { KeyboardEvent } from "react";
 import type { Lang, SpotInputs, SpotResult, UnitSystem } from "@/types";
 
@@ -36,18 +36,24 @@ export function BeamPreview({
   onExpand,
   expanded = false,
 }: Pick<GraphProps, "result" | "labels" | "unitSystem" | "onExpand" | "expanded">) {
-  const centerY = 101;
-  const leftLensX = 218;
-  const leftFocusX = 420;
-  const rightLensX = 570;
-  const rightFocusX = 738;
-  const beamHalf = clamp(result.sourceBeam * 5.2, 17, 52);
-  const expandedHalf = clamp(result.effectiveBeam * 5.1, 17, 54);
-  const lensHalf = clamp(result.lensDiameter * 2.2, 42, 74);
-  const spotOffset = clamp(result.spot * 360, 5, 18);
-  const lensCurve = (x: number, half: number) =>
-    `M${x} ${centerY - half} C${x - 34} ${centerY - half * 0.78} ${x - 36} ${centerY + half * 0.78} ${x} ${centerY + half} L${x + 16} ${centerY + half} C${x + 2} ${centerY + half * 0.45} ${x + 2} ${centerY - half * 0.45} ${x + 16} ${centerY - half} Z`;
+  const centerY = 112;
+  const startX = 46;
+  const lensX = 286;
+  const endX = 760;
+  const focalScale = (endX - lensX - 100) / 152.4;
+  const focusX = clamp(lensX + result.focalLength * focalScale, lensX + 90, endX - 92);
+  const incomingHalf = clamp(result.sourceBeam * 5.2, 18, 58);
+  const lensHalf = clamp(result.lensDiameter * 2.35, 44, 82);
+  const beamAtLensHalf = clamp(result.effectiveBeam * 5.2, 17, lensHalf - 7);
+  const spotHalf = clamp(result.spot * 410, 3.2, 12);
+  const outputHalf = clamp(spotHalf + (endX - focusX) * 0.18, 24, 62);
+  const lensPath =
+    result.shape.labelKey === "convex"
+      ? `M${lensX - 13} ${centerY - lensHalf} C${lensX - 46} ${centerY - lensHalf * 0.54} ${lensX - 46} ${centerY + lensHalf * 0.54} ${lensX - 13} ${centerY + lensHalf} C${lensX + 20} ${centerY + lensHalf * 0.54} ${lensX + 20} ${centerY - lensHalf * 0.54} ${lensX - 13} ${centerY - lensHalf} Z`
+      : `M${lensX - 18} ${centerY - lensHalf} C${lensX - 48} ${centerY - lensHalf * 0.58} ${lensX - 48} ${centerY + lensHalf * 0.58} ${lensX - 18} ${centerY + lensHalf} L${lensX + 18} ${centerY + lensHalf} C${lensX + 4} ${centerY + lensHalf * 0.36} ${lensX + 4} ${centerY - lensHalf * 0.36} ${lensX + 18} ${centerY - lensHalf} Z`;
   const open = onExpand ? () => onExpand("beam") : undefined;
+  const rayColor = result.clipped ? "var(--amber)" : "var(--beam)";
+  const paraxialColor = "var(--primary)";
 
   return (
     <div
@@ -57,40 +63,31 @@ export function BeamPreview({
       onClick={open}
       onKeyDown={(event) => graphKeydown(event, open)}
     >
-      <svg viewBox="0 0 800 202" role="img" aria-label={labels.beamPathTitle}>
-        <rect width="800" height="202" fill="transparent" />
-        <g>
-          <line x1="28" x2={leftLensX} y1={centerY - beamHalf} y2={centerY - beamHalf} stroke="#ff6b6f" strokeWidth="1.6" />
-          <line x1={leftLensX} x2={leftFocusX + 32} y1={centerY - beamHalf} y2={centerY + spotOffset} stroke="#ff6b6f" strokeWidth="1.6" />
-          <line x1="28" x2={leftLensX} y1={centerY + beamHalf} y2={centerY + beamHalf} stroke="#ff6b6f" strokeWidth="1.6" />
-          <line x1={leftLensX} x2={leftFocusX + 32} y1={centerY + beamHalf} y2={centerY - spotOffset} stroke="#ff6b6f" strokeWidth="1.6" />
-          <line x1="28" x2={leftLensX} y1={centerY - beamHalf * 0.45} y2={centerY - beamHalf * 0.45} stroke="#6f8fd9" strokeWidth="1.5" />
-          <line x1={leftLensX} x2={leftFocusX + 32} y1={centerY - beamHalf * 0.45} y2={centerY} stroke="#6f8fd9" strokeWidth="1.5" />
-          <line x1="28" x2={leftLensX} y1={centerY} y2={centerY} stroke="#6f8fd9" strokeWidth="1.5" />
-          <line x1={leftLensX} x2={leftFocusX + 32} y1={centerY} y2={centerY} stroke="#6f8fd9" strokeWidth="1.5" />
-          <line x1="28" x2={leftLensX} y1={centerY + beamHalf * 0.45} y2={centerY + beamHalf * 0.45} stroke="#6f8fd9" strokeWidth="1.5" />
-          <line x1={leftLensX} x2={leftFocusX + 32} y1={centerY + beamHalf * 0.45} y2={centerY} stroke="#6f8fd9" strokeWidth="1.5" />
-          <path d={lensCurve(leftLensX, lensHalf)} fill="#ffc400" opacity="0.96" />
-          <line x1={leftFocusX + 34} x2={leftFocusX + 34} y1="54" y2="148" stroke="#9db3e8" strokeWidth="1.6" />
-        </g>
-        <g>
-          <line x1="470" x2={rightLensX} y1={centerY - expandedHalf} y2={centerY - expandedHalf} stroke="#ff6b6f" strokeWidth="1.6" />
-          <line x1={rightLensX} x2={rightFocusX} y1={centerY - expandedHalf} y2={centerY} stroke="#ff6b6f" strokeWidth="1.6" />
-          <line x1="470" x2={rightLensX} y1={centerY + expandedHalf} y2={centerY + expandedHalf} stroke="#ff6b6f" strokeWidth="1.6" />
-          <line x1={rightLensX} x2={rightFocusX} y1={centerY + expandedHalf} y2={centerY} stroke="#ff6b6f" strokeWidth="1.6" />
-          <line x1="470" x2={rightLensX} y1={centerY - expandedHalf * 0.45} y2={centerY - expandedHalf * 0.45} stroke="#6f8fd9" strokeWidth="1.5" />
-          <line x1={rightLensX} x2={rightFocusX} y1={centerY - expandedHalf * 0.45} y2={centerY} stroke="#6f8fd9" strokeWidth="1.5" />
-          <line x1="470" x2={rightLensX} y1={centerY} y2={centerY} stroke="#6f8fd9" strokeWidth="1.5" />
-          <line x1={rightLensX} x2={rightFocusX} y1={centerY} y2={centerY} stroke="#6f8fd9" strokeWidth="1.5" />
-          <line x1="470" x2={rightLensX} y1={centerY + expandedHalf * 0.45} y2={centerY + expandedHalf * 0.45} stroke="#6f8fd9" strokeWidth="1.5" />
-          <line x1={rightLensX} x2={rightFocusX} y1={centerY + expandedHalf * 0.45} y2={centerY} stroke="#6f8fd9" strokeWidth="1.5" />
-          <path d={lensCurve(rightLensX, lensHalf)} fill="#8ccfdd" opacity="0.84" />
-          <line x1={rightFocusX + 2} x2={rightFocusX + 2} y1="55" y2="147" stroke="#9db3e8" strokeWidth="1.6" />
-        </g>
-        <text x="28" y="28" fill="var(--muted)" fontSize="12">{labels.sourceBeam}: {formatLength(result.sourceBeam, unitSystem, 2)}</text>
-        <text x="470" y="28" fill="var(--muted)" fontSize="12">{labels.effectiveBeam}: {formatLength(result.effectiveBeam, unitSystem, 2)}</text>
-        <text x="400" y="188" fill="var(--ink)" fontSize="12" fontWeight="900" textAnchor="middle">
+      <svg viewBox="0 0 800 240" role="img" aria-label={labels.beamPathTitle}>
+        <rect width="800" height="240" fill="transparent" />
+        <line x1={startX} x2={endX} y1={centerY} y2={centerY} stroke="var(--axis)" strokeDasharray="5 7" opacity="0.72" />
+
+        <path d={`M${startX} ${centerY - incomingHalf} L${lensX} ${centerY - beamAtLensHalf} L${focusX} ${centerY - spotHalf} L${endX} ${centerY - outputHalf}`} fill="none" stroke={rayColor} strokeWidth="1.8" strokeLinecap="round" />
+        <path d={`M${startX} ${centerY + incomingHalf} L${lensX} ${centerY + beamAtLensHalf} L${focusX} ${centerY + spotHalf} L${endX} ${centerY + outputHalf}`} fill="none" stroke={rayColor} strokeWidth="1.8" strokeLinecap="round" />
+        <path d={`M${startX} ${centerY - incomingHalf * 0.48} L${lensX} ${centerY - beamAtLensHalf * 0.48} L${focusX} ${centerY} L${endX} ${centerY + outputHalf * 0.48}`} fill="none" stroke={paraxialColor} strokeWidth="1.4" strokeLinecap="round" opacity="0.72" />
+        <path d={`M${startX} ${centerY + incomingHalf * 0.48} L${lensX} ${centerY + beamAtLensHalf * 0.48} L${focusX} ${centerY} L${endX} ${centerY - outputHalf * 0.48}`} fill="none" stroke={paraxialColor} strokeWidth="1.4" strokeLinecap="round" opacity="0.72" />
+
+        <path d={lensPath} fill="color-mix(in srgb, var(--primary) 34%, var(--panel-solid))" stroke="var(--primary)" strokeWidth="2" opacity="0.92" />
+        <line x1={lensX} x2={lensX} y1={centerY - lensHalf - 12} y2={centerY + lensHalf + 12} stroke="var(--line)" strokeWidth="1" />
+
+        <line x1={focusX} x2={focusX} y1={centerY - 40} y2={centerY + 40} stroke="var(--beam)" strokeWidth="1.4" strokeDasharray="4 5" />
+        <ellipse cx={focusX} cy={centerY} rx={spotHalf} ry={Math.max(spotHalf * 1.7, 5)} fill="var(--beam)" opacity="0.9" />
+
+        <text x={startX} y="32" fill="var(--muted)" fontSize="12">{labels.sourceBeam}: {formatLength(result.sourceBeam, unitSystem, 2)}</text>
+        <text x={lensX} y={centerY + lensHalf + 28} fill="var(--muted)" fontSize="12" textAnchor="middle">{labels.lens}: {formatLength(result.lensDiameter, unitSystem, 2)}</text>
+        <text x={focusX} y={centerY - 52} fill="var(--ink)" fontSize="13" fontWeight="900" textAnchor="middle">
           {labels.spotDiameter}: {formatLength(result.spot, unitSystem, 4)}
+        </text>
+        <text x={focusX} y={centerY + 62} fill="var(--muted)" fontSize="11" textAnchor="middle">
+          {labels.focalLength}: {formatLength(result.focalLength, unitSystem, 2)}
+        </text>
+        <text x={endX} y="32" fill="var(--muted)" fontSize="12" textAnchor="end">
+          {labels.effectiveBeam}: {formatLength(result.effectiveBeam, unitSystem, 2)}
         </text>
       </svg>
     </div>
@@ -139,12 +136,14 @@ export function PowerPathGraph({ result, labels, onExpand, expanded = false }: P
   );
 }
 
-export function FinishGraph({ values, result: baseResult, labels }: GraphProps) {
+export function FinishGraph({ values, result: baseResult, labels, unitSystem }: GraphProps) {
   const width = 800;
   const height = 300;
   const pad = { top: 24, right: 30, bottom: 50, left: 68 };
   const graphW = width - pad.left - pad.right;
   const graphH = height - pad.top - pad.bottom;
+  const toDisplayLength = (mm: number) => (unitSystem === "imperial" ? mmToInches(mm) : mm);
+  const yUnit = lengthUnit(unitSystem);
   const watts = Array.from({ length: 32 }, (_, index) => (baseResult.wattCeiling / 31) * index);
   const finishes = FINISHES as Record<string, { color: string }>;
   const variants: Array<{
@@ -166,7 +165,7 @@ export function FinishGraph({ values, result: baseResult, labels }: GraphProps) 
       spot: calculateSpot({ ...values, cvdMaker: variant.cvdMaker }, variant.finishKey, watt).spot,
     })),
   }));
-  const allSpots = lines.flatMap((line) => line.points.map((point) => point.spot));
+  const allSpots = lines.flatMap((line) => line.points.map((point) => toDisplayLength(point.spot)));
   const minY = Math.min(...allSpots) * 0.985;
   const maxY = Math.max(...allSpots) * 1.025;
   const xScale = (watt: number) => pad.left + (watt / baseResult.wattCeiling) * graphW;
@@ -197,17 +196,17 @@ export function FinishGraph({ values, result: baseResult, labels }: GraphProps) 
           );
         })}
         {lines.map((line) => {
-          const path = line.points.map((point, index) => `${index === 0 ? "M" : "L"}${xScale(point.watt)} ${yScale(point.spot)}`).join(" ");
+          const path = line.points.map((point, index) => `${index === 0 ? "M" : "L"}${xScale(point.watt)} ${yScale(toDisplayLength(point.spot))}`).join(" ");
           return <path key={line.id} d={path} fill="none" stroke={line.color} strokeWidth="3" strokeLinecap="round" />;
         })}
         <line x1={selectedX} x2={selectedX} y1={pad.top} y2={pad.top + graphH} stroke="var(--ink)" strokeDasharray="4 5" />
         {variants.map((variant) => {
           const finishResult = calculateSpot({ ...values, cvdMaker: variant.cvdMaker }, variant.finishKey);
-          const y = yScale(finishResult.spot);
+          const y = yScale(toDisplayLength(finishResult.spot));
           return (
             <g key={`${variant.id}-dot`}>
               <circle cx={selectedX} cy={y} r="5.5" fill={variant.color} stroke="var(--panel-solid)" strokeWidth="2">
-                <title>{variant.label}: {formatNumber(finishResult.spot, 5)} mm</title>
+                <title>{variant.label}: {formatLength(finishResult.spot, unitSystem, 5)}</title>
               </circle>
             </g>
           );
@@ -217,12 +216,12 @@ export function FinishGraph({ values, result: baseResult, labels }: GraphProps) 
           return (
             <g key={variant.id} transform={`translate(${pad.left + index * 156} ${height - 28})`}>
               <circle cx="0" cy="0" r="5" fill={variant.color} />
-              <text x="10" y="4" fill="var(--ink)" fontSize="12">{variant.label} {formatNumber(finishResult.spot, 4)} mm</text>
+              <text x="10" y="4" fill="var(--ink)" fontSize="12">{variant.label} {formatLength(finishResult.spot, unitSystem, 4)}</text>
             </g>
           );
         })}
         <text x={pad.left + graphW / 2} y={height - 4} fill="var(--ink)" fontSize="12" textAnchor="middle">W</text>
-        <text x="17" y={pad.top + graphH / 2} fill="var(--ink)" fontSize="12" textAnchor="middle" transform={`rotate(-90 17 ${pad.top + graphH / 2})`}>mm</text>
+        <text x="17" y={pad.top + graphH / 2} fill="var(--ink)" fontSize="12" textAnchor="middle" transform={`rotate(-90 17 ${pad.top + graphH / 2})`}>{yUnit}</text>
       </svg>
     </div>
   );
@@ -234,6 +233,8 @@ export function FocalGraph({ values, labels, unitSystem }: GraphProps) {
   const pad = { top: 28, right: 34, bottom: 52, left: 70 };
   const graphW = width - pad.left - pad.right;
   const graphH = height - pad.top - pad.bottom;
+  const toDisplayLength = (mm: number) => (unitSystem === "imperial" ? mmToInches(mm) : mm);
+  const yUnit = lengthUnit(unitSystem);
   const palette = ["var(--primary)", "var(--green)", "var(--beam)", "var(--violet)", "var(--amber)", "#6f8fd9"];
   const focalPoints = FOCAL_LENGTHS.map((option) => ({
     focal: option.mm,
@@ -250,7 +251,7 @@ export function FocalGraph({ values, labels, unitSystem }: GraphProps) {
     })),
   }));
   const allPoints = series.flatMap((item) => item.points);
-  const maxSpot = Math.max(...allPoints.map((point) => point.spot)) * 1.12;
+  const maxSpot = Math.max(...allPoints.map((point) => toDisplayLength(point.spot))) * 1.12;
   const selectedFocal = Number(values.focalLength);
   const selectedLensDiameter = Number(values.lensDiameter);
   const yScale = (spot: number) => pad.top + (1 - spot / maxSpot) * graphH;
@@ -277,7 +278,7 @@ export function FocalGraph({ values, labels, unitSystem }: GraphProps) {
         })}
         {series.map((item) => {
           const selectedSeries = Math.abs(item.diameter - selectedLensDiameter) < 0.02;
-          const line = item.points.map((point, index) => `${index === 0 ? "M" : "L"}${xScaleForFocal(index)} ${yScale(point.spot)}`).join(" ");
+          const line = item.points.map((point, index) => `${index === 0 ? "M" : "L"}${xScaleForFocal(index)} ${yScale(toDisplayLength(point.spot))}`).join(" ");
           return (
             <path
               key={item.diameter}
@@ -298,12 +299,12 @@ export function FocalGraph({ values, labels, unitSystem }: GraphProps) {
               <circle
                 key={`${item.diameter}-${point.focal}`}
                 cx={xScaleForFocal(index)}
-                cy={yScale(point.spot)}
+                cy={yScale(toDisplayLength(point.spot))}
                 r={selected ? 6 : selectedSeries ? 4 : 3}
                 fill={selected ? "var(--beam)" : item.color}
                 opacity={selectedSeries ? 1 : 0.58}
               >
-                <title>{item.label} / {point.label}: {formatNumber(point.spot, 5)} mm</title>
+                <title>{item.label} / {point.label}: {formatLength(point.spot, unitSystem, 5)}</title>
               </circle>
             );
           });
@@ -325,13 +326,13 @@ export function FocalGraph({ values, labels, unitSystem }: GraphProps) {
           </g>
         ))}
         <text x={pad.left + graphW / 2} y={height - 4} fill="var(--ink)" fontSize="12" textAnchor="middle">{labels.focalLength}</text>
-        <text x="17" y={pad.top + graphH / 2} fill="var(--ink)" fontSize="12" textAnchor="middle" transform={`rotate(-90 17 ${pad.top + graphH / 2})`}>mm</text>
+        <text x="17" y={pad.top + graphH / 2} fill="var(--ink)" fontSize="12" textAnchor="middle" transform={`rotate(-90 17 ${pad.top + graphH / 2})`}>{yUnit}</text>
       </svg>
     </div>
   );
 }
 
-export function BeamLibraryGraph({ values, result, labels }: GraphProps) {
+export function BeamLibraryGraph({ values, result, labels, unitSystem }: GraphProps) {
   const sortedSources = getFilteredSources(values.family)
     .slice()
     .sort((a, b) => a.ratedWatt - b.ratedWatt || a.beamMm - b.beamMm);
@@ -381,12 +382,14 @@ export function BeamLibraryGraph({ values, result, labels }: GraphProps) {
               </text>
               <rect x={bar.left} y={y} width={beamWidth(point.beamMm)} height="18" rx="9" fill={fill} />
               <text x={bar.left + beamWidth(point.beamMm) + 8} y={y + 14} fill="var(--muted)" fontSize="11">
-                {point.beamMm} mm / {point.ratedWatt} W
+                {formatLength(point.beamMm, unitSystem, 2)} / {point.ratedWatt} W
               </text>
             </g>
           );
         })}
-        <text x={bar.left + barW / 2} y={height - 12} fill="var(--ink)" fontSize="12" textAnchor="middle">{labels.beamAxis}</text>
+        <text x={bar.left + barW / 2} y={height - 12} fill="var(--ink)" fontSize="12" textAnchor="middle">
+          {labels.beamAxis.replace("(mm)", `(${lengthUnit(unitSystem)})`)}
+        </text>
       </svg>
     </div>
   );

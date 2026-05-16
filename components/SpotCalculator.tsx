@@ -17,11 +17,59 @@ import { MIRROR_DIAMETERS } from "@/lib/data/mirrors";
 import { EXPANDER_MULTIPLIERS } from "@/lib/data/options";
 import { SOURCE_LIBRARY } from "@/lib/data/sources";
 import { getFilteredSources, getSource } from "@/lib/calculators/spot";
-import { formatCompact, formatLength, formatNumber, formatOptionLength } from "@/lib/units/convert";
+import {
+  displayTemperatureValue,
+  formatCompact,
+  formatLength,
+  formatNumber,
+  formatOptionLength,
+  lengthUnit,
+  parseTemperatureValue,
+  temperatureUnit,
+} from "@/lib/units/convert";
 import type { Lang, SpotInputs, SpotResult } from "@/types";
 
 type ModalState = { title: string; body?: string; content?: ReactNode } | null;
 type GraphModalState = "path" | "beam" | "finish" | "focal" | "source" | null;
+
+const SPOT_EXTRA_TEXT: Record<string, Record<string, string>> = {
+  en: {
+    brand: "Brand",
+    model: "Model",
+    excitation: "Excitation",
+    defaultHz: "Default Hz",
+    maxHz: "Max Hz",
+    wavelength: "Wavelength",
+    confidence: "Confidence",
+    tubeLength: "Tube length",
+    tubeDiameter: "Tube diameter",
+    bestCurrent: "Best current",
+    dataSource: "Data source",
+    openSourceLink: "Open source link",
+    lensLower: "lens",
+    mirrorLower: "mirror",
+    apertureSuffix: "aperture",
+    opticalBaselineSuffix: "before finish, thermal, clipping, and alignment factors.",
+  },
+  el: {
+    brand: "Μάρκα",
+    model: "Μοντέλο",
+    excitation: "Διέγερση",
+    defaultHz: "Προεπιλεγμένα Hz",
+    maxHz: "Μέγιστα Hz",
+    wavelength: "Μήκος κύματος",
+    confidence: "Βεβαιότητα",
+    tubeLength: "Μήκος λυχνίας",
+    tubeDiameter: "Διάμετρος λυχνίας",
+    bestCurrent: "Βέλτιστο ρεύμα",
+    dataSource: "Πηγή δεδομένων",
+    openSourceLink: "Άνοιγμα συνδέσμου πηγής",
+    lensLower: "φακός",
+    mirrorLower: "καθρέφτης",
+    apertureSuffix: "καθαρό άνοιγμα",
+    opticalBaselineSuffix: "πριν τους παράγοντες φινιρίσματος, θερμότητας, clipping και ευθυγράμμισης.",
+  },
+};
 
 function stripGreekAccents(value: string): string {
   return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
@@ -29,13 +77,22 @@ function stripGreekAccents(value: string): string {
 
 function getPack(pack: Readonly<Record<string, Readonly<Record<string, string>>>>, lang: Lang): Record<string, string> {
   const packs = pack as Readonly<Record<string, Readonly<Record<string, string>>>>;
-  const source = packs[lang] || packs.en;
-  if (lang !== "el") return source;
-  return Object.fromEntries(Object.entries(source).map(([key, value]) => [key, stripGreekAccents(value)]));
+  const source = { ...packs.en, ...(packs[lang] || {}) };
+  const extra = { ...SPOT_EXTRA_TEXT.en, ...(SPOT_EXTRA_TEXT[lang] || {}) };
+  const merged = { ...source, ...extra };
+  if (lang !== "el") return merged;
+  return Object.fromEntries(Object.entries(merged).map(([key, value]) => [key, stripGreekAccents(value)]));
 }
 
-function inputPlaceholder(unit: string, label: string) {
-  return `${label} - μονάδες μέτρησης: ${unit}`;
+function inputPlaceholder(example: string) {
+  return `(${example})`;
+}
+
+function labelWithUnit(label: string, unit: string) {
+  const cleaned = label
+    .replace(/\s*\((mm|in|C|F)\)/gi, "")
+    .replace(/\s+(mm|in|C|F)$/gi, "");
+  return `${cleaned} (${unit})`;
 }
 
 function FieldLabel({
@@ -71,6 +128,8 @@ export function SpotCalculator() {
   const [modal, setModal] = useState<ModalState>(null);
   const [graphModal, setGraphModal] = useState<GraphModalState>(null);
   const filteredSources = useMemo(() => getFilteredSources(values.family), [values.family]);
+  const displayLengthUnit = lengthUnit(unitSystem);
+  const displayTemperatureUnit = temperatureUnit(unitSystem);
 
   const runCalculation = useCallback(async () => {
     try {
@@ -125,21 +184,21 @@ export function SpotCalculator() {
   function openLampDetails() {
     const source = result?.source || getSource(values.sourceId);
     const rows = [
-      ["Brand", source.brand],
-      ["Model", source.model],
-      ["Excitation", source.excitation],
+      [labels.brand, source.brand],
+      [labels.model, source.model],
+      [labels.excitation, source.excitation],
       [labels.rated, `${source.ratedWatt} W`],
       [labels.peak, source.peakWatt ? `${source.peakWatt} W` : labels.notAvailable || "N/A"],
       [labels.sourceBeam, `${formatLength(source.beamMm, unitSystem, 2)} (${source.tolerance})`],
       ["M2", String(source.m2)],
-      ["Default Hz", `${formatCompact(source.hzDefault, 0)} Hz`],
-      ["Max Hz", `${formatCompact(source.hzMax, 0)} Hz`],
-      ["Wavelength", `${source.wavelengthUm} um`],
-      ["Confidence", source.confidence],
-      ["Tube length", source.tubeLengthMm ? formatLength(source.tubeLengthMm, unitSystem, 1) : labels.notAvailable || "N/A"],
-      ["Tube diameter", source.tubeDiameterMm ? formatLength(source.tubeDiameterMm, unitSystem, 1) : labels.notAvailable || "N/A"],
-      ["Best current", source.currentBestMa ? `${source.currentBestMa} mA` : labels.notAvailable || "N/A"],
-      ["Data source", source.sourceLabel],
+      [labels.defaultHz, `${formatCompact(source.hzDefault, 0)} Hz`],
+      [labels.maxHz, `${formatCompact(source.hzMax, 0)} Hz`],
+      [labels.wavelength, `${source.wavelengthUm} um`],
+      [labels.confidence, source.confidence],
+      [labels.tubeLength, source.tubeLengthMm ? formatLength(source.tubeLengthMm, unitSystem, 1) : labels.notAvailable || "N/A"],
+      [labels.tubeDiameter, source.tubeDiameterMm ? formatLength(source.tubeDiameterMm, unitSystem, 1) : labels.notAvailable || "N/A"],
+      [labels.bestCurrent, source.currentBestMa ? `${source.currentBestMa} mA` : labels.notAvailable || "N/A"],
+      [labels.dataSource, source.sourceLabel],
     ];
     setModal({
       title: labels.lampDetails,
@@ -153,7 +212,7 @@ export function SpotCalculator() {
           ))}
           {source.sourceUrl ? (
             <a className="button source-link-button" href={source.sourceUrl} target="_blank" rel="noreferrer">
-              Open source link
+              {labels.openSourceLink}
             </a>
           ) : null}
         </div>
@@ -219,7 +278,7 @@ export function SpotCalculator() {
                 <select value={values.sourceId} onChange={(event) => updateSource(event.target.value)}>
                   {filteredSources.map((source) => (
                     <option key={source.id} value={source.id}>
-                      {source.brand} {source.model} / {source.ratedWatt} W / {source.beamMm} mm
+                      {source.brand} {source.model} / {source.ratedWatt} W / {formatLength(source.beamMm, unitSystem, 2)}
                     </option>
                   ))}
                 </select>
@@ -234,24 +293,24 @@ export function SpotCalculator() {
             <div className="field-row">
               <label>
                 <FieldLabel infoKey="measuredWatt" labels={labels} info={info} onOpen={setModal}>{labels.measuredWatt}</FieldLabel>
-                <input type="number" min="0" step="0.1" placeholder={inputPlaceholder("W", labels.measuredWatt)} value={String(values.measuredWatt ?? "")} onChange={(event) => updateField("measuredWatt", event.target.value)} />
+                <input type="number" min="0" step="0.1" placeholder={inputPlaceholder("130 W")} value={String(values.measuredWatt ?? "")} onChange={(event) => updateField("measuredWatt", event.target.value)} />
               </label>
               <label>
                 <FieldLabel infoKey="peakWatt" labels={labels} info={info} onOpen={setModal}>{labels.peakWatt}</FieldLabel>
-                <input type="number" min="0" step="0.1" placeholder={inputPlaceholder("W", labels.peakWatt)} value={String(values.peakWatt ?? "")} onChange={(event) => updateField("peakWatt", event.target.value)} />
+                <input type="number" min="0" step="0.1" placeholder={inputPlaceholder("150 W")} value={String(values.peakWatt ?? "")} onChange={(event) => updateField("peakWatt", event.target.value)} />
               </label>
             </div>
             <label>
               <FieldLabel infoKey="powerPercent" labels={labels} info={info} onOpen={setModal}>{labels.powerPercent}</FieldLabel>
               <div className="range-wrap">
                 <input type="range" min="0" max="100" step="1" value={Number(values.powerPercent)} onChange={(event) => updateField("powerPercent", Number(event.target.value))} />
-                <input type="number" min="0" max="100" step="1" placeholder={inputPlaceholder("%", labels.powerPercent)} value={String(values.powerPercent)} onChange={(event) => updateField("powerPercent", event.target.value)} />
+                <input type="number" min="0" max="100" step="1" placeholder={inputPlaceholder("65%")} value={String(values.powerPercent)} onChange={(event) => updateField("powerPercent", event.target.value)} />
               </div>
             </label>
             <div className="field-row">
               <label>
                 <FieldLabel infoKey="ampValue" labels={labels} info={info} onOpen={setModal}>{labels.ampValue}</FieldLabel>
-                <input type="number" min="0" step="0.1" placeholder={inputPlaceholder("mA", labels.ampValue)} value={String(values.ampValue ?? "")} onChange={(event) => updateField("ampValue", event.target.value)} />
+                <input type="number" min="0" step="0.1" placeholder={inputPlaceholder("30 mA")} value={String(values.ampValue ?? "")} onChange={(event) => updateField("ampValue", event.target.value)} />
               </label>
               <label>
                 <FieldLabel infoKey="ampMeterType" labels={labels} info={info} onOpen={setModal}>{labels.ampMeterType}</FieldLabel>
@@ -263,14 +322,14 @@ export function SpotCalculator() {
             </div>
             <label>
               <FieldLabel infoKey="pulseHz" labels={labels} info={info} onOpen={setModal}>{labels.pulseHz}</FieldLabel>
-              <input type="number" min="1" step="100" placeholder={inputPlaceholder("Hz", labels.pulseHz)} value={String(values.hz)} onChange={(event) => updateField("hz", event.target.value)} />
+              <input type="number" min="1" step="100" placeholder={inputPlaceholder("20000 Hz")} value={String(values.hz)} onChange={(event) => updateField("hz", event.target.value)} />
             </label>
           </CollapsibleSection>
 
           <CollapsibleSection title={labels.lens}>
             <div className="field-row">
               <label>
-                <FieldLabel infoKey="lensDiameter" labels={labels} info={info} onOpen={setModal}>{labels.lensDiameter}</FieldLabel>
+                <FieldLabel infoKey="lensDiameter" labels={labels} info={info} onOpen={setModal}>{labelWithUnit(labels.lensDiameter, displayLengthUnit)}</FieldLabel>
                 <select value={String(values.lensDiameter)} onChange={(event) => updateField("lensDiameter", Number(event.target.value))}>
                   {LENS_DIAMETERS.map((option) => (
                     <option key={option.mm} value={option.mm}>{formatOptionLength(option.mm, unitSystem)}</option>
@@ -278,7 +337,7 @@ export function SpotCalculator() {
                 </select>
               </label>
               <label>
-                <FieldLabel infoKey="focalLength" labels={labels} info={info} onOpen={setModal}>{labels.focalLength}</FieldLabel>
+                <FieldLabel infoKey="focalLength" labels={labels} info={info} onOpen={setModal}>{labelWithUnit(labels.focalLength, displayLengthUnit)}</FieldLabel>
                 <select value={String(values.focalLength)} onChange={(event) => updateField("focalLength", Number(event.target.value))}>
                   {FOCAL_LENGTHS.map((option) => (
                     <option key={option.mm} value={option.mm}>{formatOptionLength(option.mm, unitSystem)}</option>
@@ -320,14 +379,21 @@ export function SpotCalculator() {
               </select>
             </label>
             <label>
-              <FieldLabel infoKey="mirrorDiameter" labels={labels} info={info} onOpen={setModal}>{labels.mirrorDiameter}</FieldLabel>
+              <FieldLabel infoKey="mirrorDiameter" labels={labels} info={info} onOpen={setModal}>{labelWithUnit(labels.mirrorDiameter, displayLengthUnit)}</FieldLabel>
               <select value={String(values.mirrorDiameter)} onChange={(event) => updateField("mirrorDiameter", Number(event.target.value))}>
                 {MIRROR_DIAMETERS.map((mm) => <option key={mm} value={mm}>{formatOptionLength(mm, unitSystem)}</option>)}
               </select>
             </label>
             <label>
-              <FieldLabel infoKey="mirrorTempC" labels={labels} info={info} onOpen={setModal}>{labels.mirrorTempC}</FieldLabel>
-              <input type="number" min="0" step="1" placeholder={inputPlaceholder("C", labels.mirrorTempC)} value={String(values.mirrorTempC ?? "")} onChange={(event) => updateField("mirrorTempC", event.target.value)} />
+              <FieldLabel infoKey="mirrorTempC" labels={labels} info={info} onOpen={setModal}>{labelWithUnit(labels.mirrorTempC, displayTemperatureUnit)}</FieldLabel>
+              <input
+                type="number"
+                min="0"
+                step="1"
+                placeholder={inputPlaceholder(unitSystem === "imperial" ? "95 F" : "35 C")}
+                value={displayTemperatureValue(values.mirrorTempC, unitSystem)}
+                onChange={(event) => updateField("mirrorTempC", parseTemperatureValue(event.target.value, unitSystem))}
+              />
             </label>
           </CollapsibleSection>
 
@@ -355,7 +421,7 @@ export function SpotCalculator() {
               </label>
               <label>
                 <FieldLabel infoKey="alignmentLossPercent" labels={labels} info={info} onOpen={setModal}>{labels.alignmentLossPercent}</FieldLabel>
-                <input type="number" min="0" max="18" step="0.1" placeholder={inputPlaceholder("%", labels.alignmentLossPercent)} value={String(values.alignmentLossPercent)} onChange={(event) => updateField("alignmentLossPercent", event.target.value)} />
+                <input type="number" min="0" max="18" step="0.1" placeholder={inputPlaceholder("4%")} value={String(values.alignmentLossPercent)} onChange={(event) => updateField("alignmentLossPercent", event.target.value)} />
               </label>
             </div>
           </CollapsibleSection>
@@ -396,7 +462,7 @@ export function SpotCalculator() {
               <div className="readouts">
                 <MetricCard label={labels.spotDiameter} value={formatLength(result.spot, unitSystem, 4)} />
                 <MetricCard label={labels.sourceBeam} value={formatLength(result.sourceBeam, unitSystem, 2)} />
-                <MetricCard label={labels.effectiveBeam} value={formatLength(result.effectiveBeam, unitSystem, 2)} sub={`${formatLength(result.clearAperture, unitSystem, 2)} lens / ${formatLength(result.mirrorClearAperture, unitSystem, 2)} mirror`} />
+                <MetricCard label={labels.effectiveBeam} value={formatLength(result.effectiveBeam, unitSystem, 2)} sub={`${formatLength(result.clearAperture, unitSystem, 2)} ${labels.lensLower} / ${formatLength(result.mirrorClearAperture, unitSystem, 2)} ${labels.mirrorLower}`} />
                 <MetricCard label={labels.expandedBeam} value={formatLength(result.expandedBeam, unitSystem, 2)} />
                 <MetricCard label={labels.selectedWatt} value={`${formatCompact(result.selectedWatt, 2)} W`} sub={labels[result.wattBasis]} />
                 <MetricCard label={labels.deliveredWatt} value={`${formatCompact(result.deliveredWatt, 2)} W`} />
@@ -435,10 +501,10 @@ export function SpotCalculator() {
                 </details>
               </div>
               <div className={result.clipped ? "warning" : "data-note"}>
-                {result.clipped ? labels.clipped : labels.okAperture}: {formatLength(result.expandedBeam, unitSystem, 2)} beam vs {formatLength(result.clearAperture, unitSystem, 2)} lens and {formatLength(result.mirrorClearAperture, unitSystem, 2)} mirror aperture.
+                {result.clipped ? labels.clipped : labels.okAperture}: {formatLength(result.expandedBeam, unitSystem, 2)} {labels.beam} / {formatLength(result.clearAperture, unitSystem, 2)} {labels.lensLower} / {formatLength(result.mirrorClearAperture, unitSystem, 2)} {labels.mirrorLower} {labels.apertureSuffix}.
               </div>
               <div className="data-note">
-                {labels.opticalBaseline}: {formatLength(result.opticalSpot, unitSystem, 4)} before finish, thermal, clipping, and alignment factors.
+                {labels.opticalBaseline}: {formatLength(result.opticalSpot, unitSystem, 4)} {labels.opticalBaselineSuffix}
               </div>
               <div className="data-note">
                 {labels.why}: {result.stabilityReason}

@@ -1,8 +1,8 @@
 "use client";
 
-import { formatCompact } from "@/lib/units/convert";
+import { formatCompact, formatLength } from "@/lib/units/convert";
 import type { KeyboardEvent } from "react";
-import type { AxisIntervalResult, AxisResult } from "@/types";
+import type { AxisIntervalResult, AxisResult, UnitSystem } from "@/types";
 
 function graphKeydown(event: KeyboardEvent<HTMLDivElement>, action?: () => void) {
   if (!action) return;
@@ -15,11 +15,13 @@ function graphKeydown(event: KeyboardEvent<HTMLDivElement>, action?: () => void)
 export function AxisIntervalGraph({
   result,
   labels,
+  unitSystem,
   expanded = false,
   onExpand,
 }: {
   result: AxisResult;
   labels: Record<string, string>;
+  unitSystem: UnitSystem;
   expanded?: boolean;
   onExpand?: () => void;
 }) {
@@ -41,7 +43,7 @@ export function AxisIntervalGraph({
           {interval.clean ? labels.cleanHeadline : labels.notCleanHeadline}
         </text>
         <text x="32" y="60" fill="var(--muted)" fontSize="12">
-          {formatCompact(result.calc.mmPerMicrostep, 6)} mm / microstep
+          {formatLength(result.calc.mmPerMicrostep, unitSystem, 6)} / microstep
         </text>
         <line x1="64" x2="756" y1="116" y2="116" stroke="var(--axis)" strokeWidth="4" />
         <g>
@@ -62,11 +64,11 @@ export function AxisIntervalGraph({
   );
 }
 
-export function AxisMiniSummary({ interval }: { interval: AxisIntervalResult | null }) {
+export function AxisMiniSummary({ interval, unitSystem = "metric" }: { interval: AxisIntervalResult | null; unitSystem?: UnitSystem }) {
   if (!interval) return null;
   return (
     <span>
-      {formatCompact(interval.nearestCleanInterval, 6)} mm | {formatCompact(interval.nearestCleanDpi, 1)} DPI
+      {formatLength(interval.nearestCleanInterval, unitSystem, 6)} | {formatCompact(interval.nearestCleanDpi, 1)} DPI
     </span>
   );
 }
