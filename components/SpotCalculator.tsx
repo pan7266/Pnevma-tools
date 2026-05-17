@@ -17,6 +17,7 @@ import { MIRROR_DIAMETERS } from "@/lib/data/mirrors";
 import { EXPANDER_MULTIPLIERS } from "@/lib/data/options";
 import { SOURCE_LIBRARY } from "@/lib/data/sources";
 import { getFilteredSources, getSource } from "@/lib/calculators/spot";
+import { validateSpotInputs } from "@/lib/validation/spot-validation";
 import {
   displayTemperatureValue,
   displayLengthValue,
@@ -35,6 +36,26 @@ import type { SourcePreset, SpotInputs, SpotResult } from "@/types";
 type ModalState = { title: string; body?: string; content?: ReactNode } | null;
 type GraphModalState = "path" | "beam" | "finish" | "focal" | "source" | "pulse" | "expander" | "optical" | null;
 const SPOT_STORAGE_KEY = "pnevma.spot.values.v3";
+const OPTICAL_PROFILE_STORAGE_KEY = "pnevma.opticalProfiles.v1";
+const SPOT_FIELD_NAMES: Array<keyof SpotInputs> = [
+  "sourceId",
+  "manualRatedWatt",
+  "manualSourceBeamMm",
+  "manualM2",
+  "measuredWatt",
+  "peakWatt",
+  "powerPercent",
+  "ampValue",
+  "hz",
+  "lensDiameter",
+  "focalLength",
+  "mirrorDiameter",
+  "mirrorTempC",
+  "alignmentLossPercent",
+  "expanderMultiplier",
+  "beamCombinerTransmission",
+  "beamCombinerDiameter",
+];
 
 function inputPlaceholder(example: string) {
   return example;
@@ -45,6 +66,44 @@ function labelWithUnit(label: string, unit: string) {
     .replace(/\s*\((mm|in|C|F)\)/gi, "")
     .replace(/\s+(mm|in|C|F)$/gi, "");
   return `${cleaned} (${unit})`;
+}
+
+function invalidFieldsFromErrors(errors: string[]): string[] {
+  return SPOT_FIELD_NAMES.filter((field) => errors.some((error) => error.includes(field)));
+}
+
+function saveOpticalProfile(result: SpotResult) {
+  const now = new Date().toISOString();
+  const waistRadiusMm = result.spot / 2;
+  const wavelengthMm = result.source.wavelengthUm / 1000;
+  const rayleighRangeMm = Math.PI * waistRadiusMm * waistRadiusMm / (Math.max(result.source.m2, 0.01) * wavelengthMm);
+  const profile = {
+    id: "spot-current",
+    profileName: `${result.source.brand} ${result.source.model} / ${formatNumber(result.focalLength, 1)} mm / ${formatNumber(result.spot * 1000, 1)} um`,
+    wavelengthUm: result.source.wavelengthUm,
+    lensFocalLengthMm: result.focalLength,
+    measuredSpotDiameterUm: result.spot * 1000,
+    measuredSpotDiameterMm: result.spot,
+    waistRadiusMm,
+    rayleighRangeMm,
+    depthOfFocusMm: 2 * rayleighRangeMm,
+    confocalParameterMm: 2 * rayleighRangeMm,
+    m2: result.source.m2,
+    tubePowerW: result.exactOrRatedWatt,
+    tubeCurrentMa: result.expectedCurrentMa || undefined,
+    measuredOutputPowerW: result.deliveredWatt,
+    updatedAt: now,
+  };
+  try {
+    const stored = window.localStorage.getItem(OPTICAL_PROFILE_STORAGE_KEY);
+    const profiles = stored ? JSON.parse(stored) as Array<{ id?: string }> : [];
+    const next = Array.isArray(profiles)
+      ? [profile, ...profiles.filter((item: { id?: string }) => item?.id !== profile.id)]
+      : [profile];
+    window.localStorage.setItem(OPTICAL_PROFILE_STORAGE_KEY, JSON.stringify(next));
+  } catch {
+    window.localStorage.setItem(OPTICAL_PROFILE_STORAGE_KEY, JSON.stringify([profile]));
+  }
 }
 
 function FieldLabel({
@@ -79,6 +138,7 @@ export function SpotCalculator() {
   const [hasRun, setHasRun] = useState(false);
   const [result, setResult] = useState<SpotResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [invalidFields, setInvalidFields] = useState<string[]>([]);
   const [modal, setModal] = useState<ModalState>(null);
   const [graphModal, setGraphModal] = useState<GraphModalState>(null);
   const filteredSources = useMemo(() => getFilteredSources(values.family), [values.family]);
@@ -104,6 +164,11 @@ export function SpotCalculator() {
     const percent = Number(values.powerPercent || 0);
     return Number.isFinite(base) && Number.isFinite(percent) ? base * (percent / 100) : 0;
   }, [matchedSourceId, values.manualRatedWatt, values.measuredWatt, values.powerPercent]);
+  const previewCombinerTransmission = values.beamCombinerPosition === "none"
+    ? 1
+    : Math.min(Math.max(Number(values.beamCombinerTransmission || 100) / 100, 0), 1);
+  const previewPulseEnergy = (estimatedSelectedWatt * previewCombinerTransmission / Math.max(Number(values.hz) || 1, 1)) * 1000;
+  const fieldInvalid = useCallback((field: keyof SpotInputs) => invalidFields.includes(field) ? "invalid-field" : undefined, [invalidFields]);
 
   useEffect(() => {
     try {
@@ -134,24 +199,32 @@ export function SpotCalculator() {
     try {
       setError(null);
       const calculationValues = matchedSourceId && matchedSourceId !== values.sourceId ? { ...values, sourceId: matchedSourceId } : values;
+      const validation = validateSpotInputs(calculationValues);
+      if (!validation.ok || !validation.value) {
+        setInvalidFields(invalidFieldsFromErrors(validation.errors));
+        setError(labels.invalidInputs);
+        return;
+      }
       if (matchedSourceId && matchedSourceId !== values.sourceId) {
         setValues(calculationValues);
       }
-      const next = await calculateSpotFromApi(calculationValues);
+      const next = await calculateSpotFromApi(validation.value);
       setResult(next);
       setHasRun(true);
+      setInvalidFields([]);
+      saveOpticalProfile(next);
     } catch (err) {
       setError(labels.invalidInputs);
     }
   }, [labels.invalidInputs, matchedSourceId, values]);
 
   useEffect(() => {
-    if (!hasRun) return;
+    if (!storageReady) return;
     const timer = window.setTimeout(() => {
       void runCalculation();
     }, 120);
     return () => window.clearTimeout(timer);
-  }, [hasRun, runCalculation]);
+  }, [storageReady, runCalculation]);
 
   function updateField(name: keyof SpotInputs, value: SpotInputs[keyof SpotInputs]) {
     setValues((current) => ({ ...current, [name]: value }));
@@ -187,14 +260,6 @@ export function SpotCalculator() {
       return label === normalized || `${source.brand} ${source.model}`.toLowerCase() === normalized || source.id.toLowerCase() === normalized;
     });
     updateSource(match?.id || "");
-  }
-
-  function reset() {
-    setValues(spotDefaultValues as unknown as SpotInputs);
-    setSourceQuery("");
-    setResult(null);
-    setHasRun(false);
-    setError(null);
   }
 
   function openLampDetails() {
@@ -245,7 +310,7 @@ export function SpotCalculator() {
 
   function graphModalContent() {
     if (graphModal === "pulse") {
-      return <PulseHzGraph hz={Number(values.hz) || 1} selectedWatt={result?.selectedWatt || estimatedSelectedWatt} pulseEnergyMj={result?.pulseEnergyMj || (estimatedSelectedWatt / Math.max(Number(values.hz) || 1, 1)) * 1000} labels={labels} expanded onHzChange={(hz) => updateField("hz", hz)} />;
+      return <PulseHzGraph hz={Number(values.hz) || 1} selectedWatt={result?.selectedWatt || estimatedSelectedWatt} pulseEnergyMj={result?.pulseEnergyMj || previewPulseEnergy} labels={labels} expanded onHzChange={(hz) => updateField("hz", hz)} />;
     }
     if (!result) return null;
     if (graphModal === "path") return <PowerPathGraph result={result} labels={labels} expanded />;
@@ -287,76 +352,70 @@ export function SpotCalculator() {
       </header>
 
       <section className="panel panel-pad toolbar spot-source-toolbar" aria-label={labels.spotHeaderTitle}>
-        <div className="mode-field">
-          <span className="label-line">
-            {labels.family}
-            <InfoButton title={labels.family} body={info.family} onOpen={setModal} />
-          </span>
-          <select value={values.family} onChange={(event) => updateFamily(event.target.value)}>
-            <option value="all">{labels.all}</option>
-            <option value="DC">{labels.dc}</option>
-            <option value="RF">{labels.rf}</option>
-          </select>
-        </div>
-        <label className="source-autocomplete">
-          <span className="label-line">
-            {labels.sourcePreset}
-            <InfoButton title={labels.sourcePreset} body={info.sourcePreset} onOpen={setModal} />
-          </span>
-          <input
-            list="co2-source-presets"
-            value={sourceQuery}
-            placeholder={labels.sourcePresetPlaceholder}
-            onChange={(event) => updateSourceQuery(event.target.value)}
-          />
-          <datalist id="co2-source-presets">
-            {filteredSources.map((source) => (
-              <option key={source.id} value={sourceOptionLabel(source)} />
-            ))}
-          </datalist>
-        </label>
-        <label>
-          <FieldLabel infoKey="manualRatedWatt" labels={labels} info={info} onOpen={setModal}>
-            {labels.manualRatedWatt}
-          </FieldLabel>
-          <input type="number" min="0" step="0.1" placeholder={inputPlaceholder("100 W")} value={String(values.manualRatedWatt ?? "")} onChange={(event) => updateField("manualRatedWatt", event.target.value)} />
-        </label>
-        <label>
-          <FieldLabel infoKey="manualSourceBeam" labels={labels} info={info} onOpen={setModal}>
-            {labelWithUnit(labels.manualSourceBeam, displayLengthUnit)}
-          </FieldLabel>
-          <input type="number" min="0" step="0.01" placeholder={inputPlaceholder(unitSystem === "imperial" ? "0.315 in" : "8 mm")} value={displayLengthValue(values.manualSourceBeamMm, unitSystem, 4)} onChange={(event) => updateField("manualSourceBeamMm", parseLengthValue(event.target.value, unitSystem))} />
-        </label>
-        <div className="toolbar-actions">
-          <button className="button" type="button" onClick={() => void runCalculation()}>{labels.calculate}</button>
-          <button className="button secondary" type="button" onClick={openLampDetails}>{labels.lampDetails}</button>
-        </div>
-      </section>
-
-      <section className="layout">
-        <aside className="panel panel-pad stack">
-          {!matchedSourceId ? (
-            <div className="manual-source-block">
-              <p className="field-hint">{labels.manualSourceHint}</p>
-              <label>
-                <FieldLabel infoKey="manualM2" labels={labels} info={info} onOpen={setModal}>{labels.manualM2}</FieldLabel>
-                <input type="number" min="0" step="0.01" placeholder={inputPlaceholder("1.2")} value={String(values.manualM2 ?? "")} onChange={(event) => updateField("manualM2", event.target.value)} />
-              </label>
+        <div className="spot-header-grid">
+          <div className="spot-source-row">
+            <div className="mode-field">
+              <span className="label-line">
+                {labels.family}
+                <InfoButton title={labels.family} body={info.family} onOpen={setModal} />
+              </span>
+              <select value={values.family} onChange={(event) => updateFamily(event.target.value)}>
+                <option value="all">{labels.all}</option>
+                <option value="DC">{labels.dc}</option>
+                <option value="RF">{labels.rf}</option>
+              </select>
             </div>
-          ) : null}
-
-          <CollapsibleSection title={labels.lampMeasurement}>
-            <div className="field-row compact-row">
-              <label>
-                <FieldLabel infoKey="measuredWatt" labels={labels} info={info} onOpen={setModal}>{labels.measuredWatt}</FieldLabel>
-                <input type="number" min="0" step="0.1" placeholder={inputPlaceholder("130 W")} value={String(values.measuredWatt ?? "")} onChange={(event) => updateField("measuredWatt", event.target.value)} />
-              </label>
-              <label>
-                <FieldLabel infoKey="peakWatt" labels={labels} info={info} onOpen={setModal}>{labels.peakWatt}</FieldLabel>
-                <input type="number" min="0" step="0.1" placeholder={inputPlaceholder("150 W")} value={String(values.peakWatt ?? "")} onChange={(event) => updateField("peakWatt", event.target.value)} />
-              </label>
-            </div>
-            <label>
+            <label className="source-autocomplete source-preset-field">
+              <span className="label-line">
+                {labels.sourcePreset}
+                <InfoButton title={labels.sourcePreset} body={info.sourcePreset} onOpen={setModal} />
+              </span>
+              <div className="source-with-action">
+                <input
+                  list="co2-source-presets"
+                  value={sourceQuery}
+                  placeholder={labels.sourcePresetPlaceholder}
+                  onChange={(event) => updateSourceQuery(event.target.value)}
+                />
+                <button className="button secondary" type="button" onClick={openLampDetails}>{labels.lampDetails}</button>
+              </div>
+              <datalist id="co2-source-presets">
+                {filteredSources.map((source) => (
+                  <option key={source.id} value={sourceOptionLabel(source)} />
+                ))}
+              </datalist>
+            </label>
+            {!matchedSourceId ? (
+              <>
+                <label className={fieldInvalid("manualRatedWatt")}>
+                  <FieldLabel infoKey="manualRatedWatt" labels={labels} info={info} onOpen={setModal}>
+                    {labels.manualRatedWatt}
+                  </FieldLabel>
+                  <input type="number" min="0" step="0.1" placeholder={inputPlaceholder("100 W")} value={String(values.manualRatedWatt ?? "")} onChange={(event) => updateField("manualRatedWatt", event.target.value)} />
+                </label>
+                <label className={fieldInvalid("manualSourceBeamMm")}>
+                  <FieldLabel infoKey="manualSourceBeam" labels={labels} info={info} onOpen={setModal}>
+                    {labelWithUnit(labels.manualSourceBeam, displayLengthUnit)}
+                  </FieldLabel>
+                  <input type="number" min="0" step="0.01" placeholder={inputPlaceholder(unitSystem === "imperial" ? "0.315 in" : "8 mm")} value={displayLengthValue(values.manualSourceBeamMm, unitSystem, 4)} onChange={(event) => updateField("manualSourceBeamMm", parseLengthValue(event.target.value, unitSystem))} />
+                </label>
+                <label className={fieldInvalid("manualM2")}>
+                  <FieldLabel infoKey="manualM2" labels={labels} info={info} onOpen={setModal}>{labels.manualM2}</FieldLabel>
+                  <input type="number" min="0" step="0.01" placeholder={inputPlaceholder("1.2")} value={String(values.manualM2 ?? "")} onChange={(event) => updateField("manualM2", event.target.value)} />
+                </label>
+              </>
+            ) : null}
+          </div>
+          <div className="spot-measurement-row">
+            <label className={fieldInvalid("measuredWatt")}>
+              <FieldLabel infoKey="measuredWatt" labels={labels} info={info} onOpen={setModal}>{labels.measuredWatt}</FieldLabel>
+              <input type="number" min="0" step="0.1" placeholder={inputPlaceholder("130 W")} value={String(values.measuredWatt ?? "")} onChange={(event) => updateField("measuredWatt", event.target.value)} />
+            </label>
+            <label className={fieldInvalid("peakWatt")}>
+              <FieldLabel infoKey="peakWatt" labels={labels} info={info} onOpen={setModal}>{labels.peakWatt}</FieldLabel>
+              <input type="number" min="0" step="0.1" placeholder={inputPlaceholder("150 W")} value={String(values.peakWatt ?? "")} onChange={(event) => updateField("peakWatt", event.target.value)} />
+            </label>
+            <label className={`power-header-field ${fieldInvalid("powerPercent") || ""}`}>
               <FieldLabel infoKey="powerPercent" labels={labels} info={info} onOpen={setModal}>{labels.powerPercent}</FieldLabel>
               <div className="power-slider-card">
                 <div className="power-slider-top">
@@ -364,8 +423,8 @@ export function SpotCalculator() {
                   <strong>{values.powerPercent}{labels.percentUnit}</strong>
                 </div>
                 <div className="range-wrap premium-range">
-                <input type="range" min="0" max="100" step="1" value={Number(values.powerPercent)} onChange={(event) => updateField("powerPercent", Number(event.target.value))} />
-                <input type="number" min="0" max="100" step="1" placeholder={inputPlaceholder("65%")} value={String(values.powerPercent)} onChange={(event) => updateField("powerPercent", event.target.value)} />
+                  <input type="range" min="0" max="100" step="1" value={Number(values.powerPercent)} onChange={(event) => updateField("powerPercent", Number(event.target.value))} />
+                  <input type="number" min="0" max="100" step="1" placeholder={inputPlaceholder("65%")} value={String(values.powerPercent)} onChange={(event) => updateField("powerPercent", event.target.value)} />
                 </div>
                 <div className="power-slider-scale">
                   <span>{labels.minPower} 0%</span>
@@ -374,38 +433,42 @@ export function SpotCalculator() {
                 </div>
               </div>
             </label>
-            <div className="field-row compact-row">
-              <label>
-                <FieldLabel infoKey="ampValue" labels={labels} info={info} onOpen={setModal}>{labels.ampValue}</FieldLabel>
-                <input type="number" min="0" step="0.1" placeholder={inputPlaceholder("30 mA")} value={String(values.ampValue ?? "")} onChange={(event) => updateField("ampValue", event.target.value)} />
-              </label>
-              <label>
-                <FieldLabel infoKey="ampMeterType" labels={labels} info={info} onOpen={setModal}>{labels.ampMeterType}</FieldLabel>
-                <select value={values.ampMeterType} onChange={(event) => updateField("ampMeterType", event.target.value)}>
-                  <option value="digital">{labels.digital}</option>
-                  <option value="analog">{labels.analog}</option>
-                </select>
-              </label>
-            </div>
-            <div className="field-row preview-row">
-              <label>
+            <label className={fieldInvalid("ampValue")}>
+              <FieldLabel infoKey="ampValue" labels={labels} info={info} onOpen={setModal}>{labels.ampValue}</FieldLabel>
+              <input type="number" min="0" step="0.1" placeholder={inputPlaceholder("30 mA")} value={String(values.ampValue ?? "")} onChange={(event) => updateField("ampValue", event.target.value)} />
+            </label>
+            <label>
+              <FieldLabel infoKey="ampMeterType" labels={labels} info={info} onOpen={setModal}>{labels.ampMeterType}</FieldLabel>
+              <select value={values.ampMeterType} onChange={(event) => updateField("ampMeterType", event.target.value)}>
+                <option value="digital">{labels.digital}</option>
+                <option value="analog">{labels.analog}</option>
+              </select>
+            </label>
+            <div className={`pulse-stack ${fieldInvalid("hz") || ""}`}>
+              <label className={fieldInvalid("hz")}>
                 <FieldLabel infoKey="pulseHz" labels={labels} info={info} onOpen={setModal}>{labels.pulseHz}</FieldLabel>
                 <input type="number" min="1" step="100" placeholder={inputPlaceholder("20000 Hz")} value={String(values.hz)} onChange={(event) => updateField("hz", event.target.value)} />
               </label>
               <PulseHzGraph
                 hz={Number(values.hz) || 1}
                 selectedWatt={result?.selectedWatt || estimatedSelectedWatt}
-                pulseEnergyMj={result?.pulseEnergyMj || (estimatedSelectedWatt / Math.max(Number(values.hz) || 1, 1)) * 1000}
+                pulseEnergyMj={result?.pulseEnergyMj || previewPulseEnergy}
                 labels={labels}
                 onHzChange={(hz) => updateField("hz", hz)}
                 onExpand={() => setGraphModal("pulse")}
               />
             </div>
-          </CollapsibleSection>
+          </div>
+        </div>
+      </section>
+
+      <section className="layout">
+        <aside className="panel panel-pad stack">
+          {error ? <div className="error">{error}</div> : null}
 
           <CollapsibleSection title={labels.lens}>
             <div className="field-row compact-row">
-              <label>
+              <label className={fieldInvalid("lensDiameter")}>
                 <FieldLabel infoKey="lensDiameter" labels={labels} info={info} onOpen={setModal}>{labelWithUnit(labels.lensDiameter, displayLengthUnit)}</FieldLabel>
                 <select value={String(values.lensDiameter)} onChange={(event) => updateField("lensDiameter", Number(event.target.value))}>
                   {LENS_DIAMETERS.map((option) => (
@@ -413,7 +476,7 @@ export function SpotCalculator() {
                   ))}
                 </select>
               </label>
-              <label>
+              <label className={fieldInvalid("focalLength")}>
                 <FieldLabel infoKey="focalLength" labels={labels} info={info} onOpen={setModal}>{labelWithUnit(labels.focalLength, displayLengthUnit)}</FieldLabel>
                 <select value={String(values.focalLength)} onChange={(event) => updateField("focalLength", Number(event.target.value))}>
                   {FOCAL_LENGTHS.map((option) => (
@@ -464,17 +527,19 @@ export function SpotCalculator() {
                   finishKey={values.mirrorFinish}
                   label={MIRROR_FINISHES[values.mirrorFinish as keyof typeof MIRROR_FINISHES]?.label || labels.mirrorFinish}
                   reflectivity={MIRROR_FINISHES[values.mirrorFinish as keyof typeof MIRROR_FINISHES]?.reflectivity || 0}
+                  diameterMm={Number(values.mirrorDiameter) || 0}
+                  unitSystem={unitSystem}
                   labels={labels}
                 />
               </div>
               <div className="optic-column">
-                <label>
+                <label className={fieldInvalid("mirrorDiameter")}>
                   <FieldLabel infoKey="mirrorDiameter" labels={labels} info={info} onOpen={setModal}>{labelWithUnit(labels.mirrorDiameter, displayLengthUnit)}</FieldLabel>
                   <select value={String(values.mirrorDiameter)} onChange={(event) => updateField("mirrorDiameter", Number(event.target.value))}>
                     {MIRROR_DIAMETERS.map((mm) => <option key={mm} value={mm}>{formatOptionLength(mm, unitSystem)}</option>)}
                   </select>
                 </label>
-                <label>
+                <label className={fieldInvalid("mirrorTempC")}>
                   <FieldLabel infoKey="mirrorTempC" labels={labels} info={info} onOpen={setModal}>{labelWithUnit(labels.mirrorTempC, displayTemperatureUnit)}</FieldLabel>
                   <input
                     type="number"
@@ -499,8 +564,8 @@ export function SpotCalculator() {
                 <input type="checkbox" checked={values.extractorOn} onChange={(event) => updateField("extractorOn", event.target.checked)} />
                 <FieldLabel infoKey="extractorOn" labels={labels} info={info} onOpen={setModal}>{labels.extractorOn}</FieldLabel>
               </label>
-              <label>
-                <FieldLabel infoKey="extractorStrength" labels={labels} info={info} onOpen={setModal}>{labels.extractorStrength}</FieldLabel>
+              <label className="compact-select-only">
+                <span className="sr-only">{labels.extractorStrength}</span>
                 <select value={values.extractorStrength} onChange={(event) => updateField("extractorStrength", event.target.value)}>
                   <option value="weak">{labels.weak}</option>
                   <option value="normal">{labels.normal}</option>
@@ -513,7 +578,7 @@ export function SpotCalculator() {
                 <input type="checkbox" checked={values.imperfectAlignment} onChange={(event) => updateField("imperfectAlignment", event.target.checked)} />
                 <FieldLabel infoKey="imperfectAlignment" labels={labels} info={info} onOpen={setModal}>{labels.imperfectAlignment}</FieldLabel>
               </label>
-              <label>
+              <label className={fieldInvalid("alignmentLossPercent")}>
                 <FieldLabel infoKey="alignmentLossPercent" labels={labels} info={info} onOpen={setModal}>{labels.alignmentLossPercent}</FieldLabel>
                 <select value={String(values.alignmentLossPercent)} onChange={(event) => updateField("alignmentLossPercent", event.target.value)}>
                   {Array.from({ length: 19 }, (_, percent) => (
@@ -522,7 +587,6 @@ export function SpotCalculator() {
                     </option>
                   ))}
                 </select>
-                <span className="field-hint">{labels.alignmentLossHint}</span>
                 {result ? <span className="field-hint">{labels.alignmentImpact}: {formatCompact(result.alignmentLostWatt, 2)} W</span> : null}
               </label>
             </div>
@@ -534,7 +598,7 @@ export function SpotCalculator() {
               <FieldLabel infoKey="useExpander" labels={labels} info={info} onOpen={setModal}>{labels.useExpander}</FieldLabel>
             </label>
             <div className="field-row preview-row">
-              <label>
+              <label className={fieldInvalid("expanderMultiplier")}>
                 <FieldLabel infoKey="expanderMultiplier" labels={labels} info={info} onOpen={setModal}>{labels.expanderMultiplier}</FieldLabel>
                 <select value={String(values.expanderMultiplier)} onChange={(event) => updateField("expanderMultiplier", Number(event.target.value))} disabled={!values.useExpander}>
                   {EXPANDER_MULTIPLIERS.map((multiplier) => <option key={multiplier} value={multiplier}>{multiplier}x</option>)}
@@ -552,22 +616,17 @@ export function SpotCalculator() {
               </select>
             </label>
             <div className="field-row compact-row">
-              <label>
+              <label className={fieldInvalid("beamCombinerTransmission")}>
                 <FieldLabel infoKey="beamCombinerTransmission" labels={labels} info={info} onOpen={setModal}>{labels.combinerTransmission}</FieldLabel>
                 <input type="number" min="0" max="100" step="0.1" placeholder={inputPlaceholder("97%")} value={String(values.beamCombinerTransmission)} onChange={(event) => updateField("beamCombinerTransmission", event.target.value)} disabled={values.beamCombinerPosition === "none"} />
               </label>
-              <label>
+              <label className={fieldInvalid("beamCombinerDiameter")}>
                 <FieldLabel infoKey="beamCombinerDiameter" labels={labels} info={info} onOpen={setModal}>{labelWithUnit(labels.combinerDiameter, displayLengthUnit)}</FieldLabel>
                 <input type="number" min="0" step="0.1" placeholder={inputPlaceholder(unitSystem === "imperial" ? "0.79 in" : "20 mm")} value={displayLengthValue(values.beamCombinerDiameter, unitSystem, 3)} onChange={(event) => updateField("beamCombinerDiameter", parseLengthValue(event.target.value, unitSystem))} disabled={values.beamCombinerPosition === "none"} />
               </label>
             </div>
           </CollapsibleSection>
 
-          <div className="button-row">
-            <button className="button" type="button" onClick={() => void runCalculation()}>{labels.calculate}</button>
-            <button className="button secondary" type="button" onClick={reset}>{labels.reset}</button>
-          </div>
-          {error ? <div className="error">{error}</div> : null}
         </aside>
 
         <section className="stack">

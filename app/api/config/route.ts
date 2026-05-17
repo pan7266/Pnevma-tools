@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { axisDefaultValues, spotDefaultValues } from "@/lib/data/defaults";
 import { FINISHES, MIRROR_FINISHES } from "@/lib/data/finishes";
 import { FOCAL_LENGTHS, LENS_DIAMETERS, LENS_SHAPES } from "@/lib/data/lenses";
+import { DEFAULT_OPTICAL_PROFILE, KERF_CALIBRATION_MODES, KERF_MATERIALS, KERF_OPERATIONS, KERF_QUALITY_GOALS } from "@/lib/data/kerf";
 import { MIRROR_DIAMETERS, MIRROR_COUNT_PRESETS } from "@/lib/data/mirrors";
 import { MOTOR_PRESETS } from "@/lib/data/motors";
 import {
@@ -39,6 +40,13 @@ export function GET() {
       dpiTargets: DPI_TARGETS,
       cleanMicrostepCounts: CLEAN_MICROSTEP_COUNTS,
       motorPresets: MOTOR_PRESETS,
+    },
+    kerf: {
+      defaultOpticalProfile: DEFAULT_OPTICAL_PROFILE,
+      materials: KERF_MATERIALS,
+      operations: KERF_OPERATIONS,
+      qualityGoals: KERF_QUALITY_GOALS,
+      calibrationModes: KERF_CALIBRATION_MODES,
     },
     i18n: {
       locales: LOCALES,
