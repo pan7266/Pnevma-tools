@@ -1,4 +1,4 @@
-import { AXIS_TEXT } from "@/lib/data/i18n";
+import { AXIS_TEXT } from "@/locales";
 import type {
   AxisCalc,
   AxisGraphData,
@@ -211,15 +211,17 @@ function getDualMotorMessageKey(axis: AxisMechanics): string {
   return matched ? "matchedDual" : "suspiciousDual";
 }
 
-function getGraphData(interval: AxisIntervalResult | null): AxisGraphData | null {
+function getGraphData(interval: AxisIntervalResult | null, calc: AxisCalc, requestedDpi: number | null): AxisGraphData | null {
   if (!interval) return null;
   const width = 692;
   const start = 64;
   const total = Math.max(interval.nearestMicrosteps + 2, 4);
   const requestedX = start + width * Math.min(interval.intervalMicrosteps / Math.max(total, 1), 1);
   const nearestX = start + width * Math.min(interval.nearestMicrosteps / Math.max(total, 1), 1);
+  const dpiMicrosteps = requestedDpi && requestedDpi > 0 && calc.mmPerMicrostep > 0 ? (25.4 / requestedDpi) / calc.mmPerMicrostep : interval.intervalMicrosteps;
+  const currentDpiX = start + width * Math.min(dpiMicrosteps / Math.max(total, 1), 1);
   const ticks = Array.from({ length: total + 1 }, (_, i) => start + (i / total) * width);
-  return { requestedX, nearestX, ticks };
+  return { requestedX, nearestX, currentDpiX, ticks };
 }
 
 export function calculateAxis(input: AxisInputs): AxisResult {
@@ -227,6 +229,9 @@ export function calculateAxis(input: AxisInputs): AxisResult {
   const activeAxisKey = getActiveAxisKey(input.scanMode);
   const activeAxis = input.axes[activeAxisKey];
   const calc = calculateAxisMechanics(activeAxis, lang);
+  const requestedLineInterval = getRequestedLineInterval(input);
+  const dpiValue = numberValue(input.dpi);
+  const requestedDpi = isPositive(dpiValue) ? dpiValue : requestedLineInterval ? 25.4 / requestedLineInterval : null;
   const interval = calculateAxisInterval(input, calc);
   const spot = calculateAxisSpot(input);
   const warnings = [];
@@ -240,12 +245,14 @@ export function calculateAxis(input: AxisInputs): AxisResult {
   return {
     activeAxisKey,
     activeAxis,
+    requestedLineInterval,
+    requestedDpi,
     calc,
     interval,
     spot,
     controller: getControllerComparison(activeAxis, calc),
     dualMotorMessageKey: getDualMotorMessageKey(activeAxis),
-    graphData: getGraphData(interval),
+    graphData: getGraphData(interval, calc, requestedDpi),
     warnings,
   };
 }

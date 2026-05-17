@@ -2,16 +2,19 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useAppSettings } from "@/components/AppSettings";
 import { LanguageToggle } from "@/components/LanguageToggle";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { UnitToggle } from "@/components/UnitToggle";
+import { getLocale } from "@/locales";
 
-const tools = [
+function getTools(labels: Record<string, string>) {
+  return [
   {
     href: "/spot",
     key: "spot",
-    name: "CO2 Laser Spot Diameter",
-    meta: "Lens, source, mirrors, losses, graphs",
+    name: labels.spotToolName,
+    meta: labels.spotToolMeta,
     icon: (
       <svg viewBox="0 0 24 24" aria-hidden="true">
         <path d="M4 12h7" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
@@ -23,8 +26,8 @@ const tools = [
   {
     href: "/axis",
     key: "axis",
-    name: "Axis Line Interval",
-    meta: "Microsteps, DPI targets, spot overlap",
+    name: labels.axisToolName,
+    meta: labels.axisToolMeta,
     icon: (
       <svg viewBox="0 0 24 24" aria-hidden="true">
         <path d="M4 17h16M4 12h16M4 7h16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
@@ -32,14 +35,18 @@ const tools = [
       </svg>
     ),
   },
-];
+  ];
+}
 
 export function Sidebar() {
   const pathname = usePathname();
+  const { lang } = useAppSettings();
+  const labels = getLocale(lang).common;
+  const tools = getTools(labels);
   const active = pathname === "/" ? "/spot" : pathname;
 
   return (
-    <aside className="sidebar" aria-label="Pnevma tools">
+    <aside className="sidebar" aria-label={labels.sidebarAria}>
       <div className="workspace-brand">
         <div className="brand-mark" aria-hidden="true">
           <svg viewBox="0 0 64 64">
@@ -49,11 +56,11 @@ export function Sidebar() {
           </svg>
         </div>
         <div>
-          <strong>Pnevma Tools</strong>
+          <strong>{labels.appName}</strong>
         </div>
       </div>
 
-      <nav className="tool-list" aria-label="Tools">
+      <nav className="tool-list" aria-label={labels.toolsAria}>
         {tools.map((tool) => (
           <Link key={tool.key} className={`tool-button ${active === tool.href ? "active" : ""}`} href={tool.href}>
             <span className="tool-icon">{tool.icon}</span>
@@ -67,15 +74,15 @@ export function Sidebar() {
 
       <div className="sidebar-controls">
         <div>
-          <span className="control-label">Language</span>
+          <span className="control-label">{labels.language}</span>
           <LanguageToggle />
         </div>
         <div>
-          <span className="control-label">Theme</span>
+          <span className="control-label">{labels.theme}</span>
           <ThemeToggle />
         </div>
         <div>
-          <span className="control-label">Units</span>
+          <span className="control-label">{labels.units}</span>
           <UnitToggle />
         </div>
       </div>

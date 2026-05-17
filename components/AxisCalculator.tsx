@@ -2,14 +2,14 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAppSettings } from "@/components/AppSettings";
-import { AxisIntervalGraph } from "@/components/AxisGraphs";
+import { AxisIntervalGraph, EngravingLineGraph } from "@/components/AxisGraphs";
 import { GraphModal } from "@/components/GraphModal";
 import { InfoButton } from "@/components/ui/InfoButton";
 import { MetricCard } from "@/components/ui/MetricCard";
 import { calculateAxisFromApi } from "@/lib/api/axis-client";
 import { calculateAxisMechanics } from "@/lib/calculators/axis";
 import { axisDefaultValues } from "@/lib/data/defaults";
-import { AXIS_TEXT } from "@/lib/data/i18n";
+import { MOTOR_PRESETS, getMotorPreset } from "@/lib/data/motors";
 import { CLEAN_MICROSTEP_COUNTS } from "@/lib/data/options";
 import {
   displayLengthValue,
@@ -20,130 +20,15 @@ import {
   parseLengthValue,
   parseStepsPerLengthValue,
 } from "@/lib/units/convert";
+import { getLocale } from "@/locales";
 import type { AxisInputs, AxisKey, AxisMechanics, AxisResult, Lang, NumericInput } from "@/types";
 
 type InfoModal = { title: string; body: string } | null;
-
-const AXIS_EXTRA_TEXT: Record<string, Record<string, string>> = {
-  en: {
-    status: "Status",
-    dpi: "DPI",
-    intervalAxis: "Interval axis",
-    lineIntervalOrDpi: "Line interval or DPI",
-    useXAxis: "X interval",
-    useYAxis: "Y interval",
-    horizontalShort: "X scan / Y interval",
-    verticalShort: "Y scan / X interval",
-    beltPitchPreset: "Belt pitch preset",
-    close: "Close",
-    fieldInfo: "Field information",
-    scanModeDescription: "Choose which machine axis moves between engraving scan lines.",
-    lineIntervalDescription: "Distance between neighbouring engraved scan lines. Editing this value recalculates DPI.",
-    dpiDescription: "Dots per inch equivalent. Editing DPI recalculates the line interval.",
-    spotDiameterDescription: "Optional focused beam spot diameter used only for overlap guidance.",
-    driveTypeDescription: "Select how this axis converts motor rotation into linear motion.",
-    motorAngleDescription: "Motor full-step angle from the motor label or datasheet.",
-    microsteppingDescription: "Driver microstep setting, for example 8, 16, 32, or 64.",
-    controllerStepsDescription: "Use the value from Ruida, AWC, Trocen, GRBL, etc. Leave empty if unknown.",
-    beltPitchDescription: "Distance between belt teeth in millimetres.",
-    pulleyTeethDescription: "Number of teeth on the pulley that drives this axis.",
-    screwPitchDescription: "Distance travelled by one screw thread turn in millimetres.",
-    threadStartsDescription: "Number of independent thread starts on the lead screw.",
-    directTravelDescription: "Real axis travel in millimetres for one motor revolution.",
-    dualMotorModeDescription: "Leave as no dual motor unless this axis is driven by two motors.",
-    secondMotorAngleDescription: "Second motor full-step angle for dual-motor setups.",
-    secondPulleyTeethDescription: "Second motor pulley teeth for dual-motor belt setups.",
-    secondMicrosteppingDescription: "Second driver microstep setting for dual-motor setups.",
-  },
-  el: {
-    status: "Κατάσταση",
-    dpi: "DPI",
-    intervalAxis: "Αξονας διαστηματος",
-    lineIntervalOrDpi: "Διαστημα γραμμων η DPI",
-    useXAxis: "Διαστημα X",
-    useYAxis: "Διαστημα Y",
-    horizontalShort: "Σαρωση X / διαστημα Y",
-    verticalShort: "Σαρωση Y / διαστημα X",
-    beltPitchPreset: "Προεπιλογη βηματος ιμαντα",
-    close: "Κλεισιμο",
-    fieldInfo: "Πληροφοριες πεδιου",
-    scanModeDescription: "Διαλεξε ποιος αξονας μετακινειται αναμεσα στις γραμμες χαραξης.",
-    lineIntervalDescription: "Αποσταση αναμεσα σε γειτονικες γραμμες. Αν αλλαξει, υπολογιζεται το DPI.",
-    dpiDescription: "Αντιστοιχο dots per inch. Αν αλλαξει, υπολογιζεται το διαστημα γραμμων.",
-    spotDiameterDescription: "Προαιρετικη διαμετρος spot για οδηγο επικαλυψης.",
-    driveTypeDescription: "Πως ο αξονας μετατρεπει την περιστροφη μοτερ σε γραμμικη κινηση.",
-    motorAngleDescription: "Γωνια πληρους βηματος απο την ετικετα η datasheet του μοτερ.",
-    microsteppingDescription: "Ρυθμιση driver, π.χ. 8, 16, 32, 64.",
-    controllerStepsDescription: "Χρησιμοποιησε την τιμη απο Ruida, AWC, Trocen, GRBL, κτλ. Αφησε το κενο αν δεν την ξερεις.",
-    beltPitchDescription: "Αποσταση αναμεσα στα δοντια του ιμαντα σε mm.",
-    pulleyTeethDescription: "Δοντια της τροχαλιας που κινει τον αξονα.",
-    screwPitchDescription: "Μετακινηση για μια στροφη σπειρωματος σε mm.",
-    threadStartsDescription: "Ποσες αρχες σπειρωματος εχει ο κοχλιας.",
-    directTravelDescription: "Πραγματικη μετακινηση αξονα για μια περιστροφη μοτερ.",
-    dualMotorModeDescription: "Αφησε χωρις διπλο μοτερ, εκτος αν ο αξονας κινειται με δυο μοτερ.",
-    secondMotorAngleDescription: "Γωνια βηματος δευτερου μοτερ.",
-    secondPulleyTeethDescription: "Δοντια τροχαλιας δευτερου μοτερ.",
-    secondMicrosteppingDescription: "Microstepping δευτερου driver.",
-  },
-  de: {
-    dpi: "DPI",
-    intervalAxis: "Intervallachse",
-    lineIntervalOrDpi: "Linienabstand oder DPI",
-    useXAxis: "X-Achse verwenden",
-    useYAxis: "Y-Achse verwenden",
-    close: "Schliessen",
-  },
-  fr: {
-    dpi: "DPI",
-    intervalAxis: "Axe d'intervalle",
-    lineIntervalOrDpi: "Intervalle ou DPI",
-    useXAxis: "Utiliser X",
-    useYAxis: "Utiliser Y",
-    close: "Fermer",
-  },
-  es: {
-    dpi: "DPI",
-    intervalAxis: "Eje de intervalo",
-    lineIntervalOrDpi: "Intervalo o DPI",
-    useXAxis: "Usar eje X",
-    useYAxis: "Usar eje Y",
-    close: "Cerrar",
-  },
-  it: {
-    dpi: "DPI",
-    intervalAxis: "Asse intervallo",
-    lineIntervalOrDpi: "Intervallo o DPI",
-    useXAxis: "Usa asse X",
-    useYAxis: "Usa asse Y",
-    close: "Chiudi",
-  },
-  tr: {
-    dpi: "DPI",
-    intervalAxis: "Aralik ekseni",
-    lineIntervalOrDpi: "Cizgi araligi veya DPI",
-    useXAxis: "X eksenini kullan",
-    useYAxis: "Y eksenini kullan",
-    close: "Kapat",
-  },
-};
 
 const BELT_PITCH_PRESETS = [
   { key: "MXL", label: "MXL", mm: 2.032 },
   { key: "GT2", label: "GT2", mm: 2 },
 ] as const;
-
-function stripGreekAccents(value: string): string {
-  return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-}
-
-function getPack(lang: Lang): Record<string, string> {
-  const packs = AXIS_TEXT as Readonly<Record<string, Readonly<Record<string, string>>>>;
-  const source = { ...packs.en, ...(packs[lang] || {}) };
-  const extra = { ...AXIS_EXTRA_TEXT.en, ...(AXIS_EXTRA_TEXT[lang] || {}) };
-  const merged = { ...source, ...extra };
-  if (lang !== "el") return merged;
-  return Object.fromEntries(Object.entries(merged).map(([key, value]) => [key, stripGreekAccents(value)]));
-}
 
 function format(value: number | null | undefined, decimals = 4, fallback = "N/A"): string {
   return Number.isFinite(value) ? Number(value).toFixed(decimals) : fallback;
@@ -280,6 +165,7 @@ function AxisCard({
   const desc = (key: string) => labels[`${key}Description`] || labels.fieldInfo;
   const unit = lengthUnit(unitSystem);
   const selectedPitch = BELT_PITCH_PRESETS.find((preset) => Math.abs(Number(axis.beltPitch) - preset.mm) < 0.0001)?.key || "custom";
+  const motorPreset = getMotorPreset(axis.motorPresetId);
 
   return (
     <details className={`axis-card ${active ? "active" : "inactive"}`} open={active}>
@@ -310,6 +196,30 @@ function AxisCard({
         />
         {!isControllerOnly ? (
           <>
+            <SelectField
+              label={labels.motorPreset}
+              value={axis.motorPresetId || ""}
+              description={labels.manualOverride}
+              onInfo={onInfo}
+              onChange={(value) => onChange(axisKey, "motorPresetId", value)}
+              options={[
+                ["", labels.manualOverride],
+                ...MOTOR_PRESETS.map((preset) => [preset.id, `${preset.name} (${preset.frameSize}, ${preset.stepAngleDeg} deg)`] as [string, string]),
+              ]}
+            />
+            {motorPreset ? (
+              <article className="motor-spec-panel">
+                <h3>{labels.selectedMotorSpecs}</h3>
+                <div className="kv"><span>{labels.frameSize}</span><span>{motorPreset.frameSize}</span></div>
+                <div className="kv"><span>{labels.stepAngle}</span><span>{motorPreset.stepAngleDeg} deg</span></div>
+                <div className="kv"><span>{labels.fullSteps}</span><span>{motorPreset.fullStepsPerRev}</span></div>
+                <div className="kv"><span>{labels.ratedCurrent}</span><span>{motorPreset.ratedCurrentA ? `${motorPreset.ratedCurrentA} A` : labels.unknown}</span></div>
+                <div className="kv"><span>{labels.holdingTorque}</span><span>{motorPreset.holdingTorque}</span></div>
+                <div className="kv"><span>{labels.shaftType}</span><span>{motorPreset.shaftType}</span></div>
+                <p className="small">{motorPreset.notes} {motorPreset.estimated ? `(${labels.estimated})` : ""}</p>
+                {motorPreset.sourceUrl ? <a className="source-link-button" href={motorPreset.sourceUrl} target="_blank" rel="noreferrer">{labels.sourceLink}</a> : null}
+              </article>
+            ) : null}
             <Field label={labels.motorAngle} step="0.0001" placeholder="0.9" value={axis.motorAngle} description={desc("motorAngle")} onInfo={onInfo} onChange={(value) => onChange(axisKey, "motorAngle", value)} />
             <Field label={labels.microstepping} step="1" placeholder="16" value={axis.microstepping} description={desc("microstepping")} onInfo={onInfo} onChange={(value) => onChange(axisKey, "microstepping", value)} />
           </>
@@ -390,7 +300,7 @@ function AxisCard({
 
 export function AxisCalculator() {
   const { lang, theme, unitSystem } = useAppSettings();
-  const labels = useMemo(() => getPack(lang), [lang]);
+  const labels = useMemo(() => getLocale(lang).axis, [lang]);
   const [values, setValues] = useState<AxisInputs>({ ...axisDefaultValues, language: lang, theme, unitSystem });
   const [result, setResult] = useState<AxisResult | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -419,6 +329,7 @@ export function AxisCalculator() {
   }, [runCalculation, values.liveCalculation]);
 
   function updateAxis(axisKey: AxisKey, field: keyof AxisMechanics, value: string) {
+    const preset = field === "motorPresetId" ? getMotorPreset(value) : null;
     setValues((current) => ({
       ...current,
       axes: {
@@ -426,6 +337,7 @@ export function AxisCalculator() {
         [axisKey]: {
           ...current.axes[axisKey],
           [field]: value,
+          ...(preset ? { motorAngle: preset.stepAngleDeg } : {}),
         },
       },
     }));
@@ -458,10 +370,6 @@ export function AxisCalculator() {
     });
   }
 
-  function setIntervalAxis(axisKey: AxisKey) {
-    updateRoot("scanMode", axisKey === "x" ? "vertical" : "horizontal");
-  }
-
   function updateSpotDiameter(displayValue: string) {
     updateRoot("spotDiameter", parseLengthValue(displayValue, unitSystem));
   }
@@ -476,9 +384,9 @@ export function AxisCalculator() {
         <div className="brand">
           <div className="brand-mark" aria-hidden="true">
             <svg viewBox="0 0 64 64">
-              <path d="M10 43L32 10l22 43H10Z" fill="none" stroke="#f5b45b" strokeWidth="4" strokeLinejoin="round" />
-              <path d="M21 40h22" stroke="#66a3ff" strokeWidth="5" strokeLinecap="round" />
-              <circle cx="32" cy="32" r="4" fill="#ffffff" />
+              <path d="M12 18h40M12 32h40M12 46h40" fill="none" stroke="#ff6b6f" strokeWidth="4" strokeLinecap="round" />
+              <path d="M22 10v44M42 10v44" fill="none" stroke="#66a3ff" strokeWidth="3" strokeLinecap="round" />
+              <circle cx="32" cy="32" r="5" fill="#ffffff" />
             </svg>
           </div>
           <div>
@@ -486,19 +394,9 @@ export function AxisCalculator() {
             <p className="subhead">{labels.subtitle}</p>
           </div>
         </div>
-        <div className="axis-choice-row" aria-label={labels.intervalAxis}>
-          <label className="axis-choice">
-            <input type="checkbox" checked={activeAxis === "x"} onChange={(event) => event.target.checked && setIntervalAxis("x")} />
-            <span>{labels.useXAxis}</span>
-          </label>
-          <label className="axis-choice">
-            <input type="checkbox" checked={activeAxis === "y"} onChange={(event) => event.target.checked && setIntervalAxis("y")} />
-            <span>{labels.useYAxis}</span>
-          </label>
-        </div>
       </header>
 
-      <section className="panel panel-pad toolbar axis-toolbar" aria-label="Global settings">
+      <section className="panel panel-pad toolbar axis-toolbar" aria-label={labels.lineIntervalOrDpi}>
         <div className="mode-field">
           <span className="label-line">
             {labels.scanMode}
@@ -620,7 +518,12 @@ export function AxisCalculator() {
         </section>
 
         <aside className="panel visual-panel">
-          {result ? <AxisIntervalGraph result={result} labels={labels} unitSystem={unitSystem} onExpand={() => setGraphOpen(true)} /> : null}
+          {result ? (
+            <>
+              <AxisIntervalGraph result={result} labels={labels} unitSystem={unitSystem} onExpand={() => setGraphOpen(true)} />
+              <EngravingLineGraph result={result} labels={labels} unitSystem={unitSystem} />
+            </>
+          ) : null}
         </aside>
       </section>
 

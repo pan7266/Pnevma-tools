@@ -22,6 +22,7 @@ describe("validation", () => {
   it("coerces numeric strings and rejects impossible values", () => {
     const valid = validateSpotInputs({
       ...(spotDefaultValues as unknown as SpotInputs),
+      sourceId: "reci-w4",
       lensDiameter: "20",
       focalLength: "50.8",
     });
@@ -30,6 +31,7 @@ describe("validation", () => {
 
     const invalid = validateSpotInputs({
       ...(spotDefaultValues as unknown as SpotInputs),
+      sourceId: "reci-w4",
       lensDiameter: "0",
     });
     expect(invalid.ok).toBe(false);

@@ -52,6 +52,9 @@ export type LabelPack = Record<string, string>;
 export interface SpotInputs {
   family: "all" | "DC" | "RF" | string;
   sourceId: string;
+  manualRatedWatt: NumericInput;
+  manualSourceBeamMm: NumericInput;
+  manualM2: NumericInput;
   measuredWatt: NumericInput;
   peakWatt: NumericInput;
   powerPercent: NumericInput;
@@ -74,6 +77,9 @@ export interface SpotInputs {
   alignmentLossPercent: NumericInput;
   useExpander: boolean;
   expanderMultiplier: NumericInput;
+  beamCombinerPosition: "none" | "nearSource" | "beforeFirstMirror" | "firstMirror" | string;
+  beamCombinerTransmission: NumericInput;
+  beamCombinerDiameter: NumericInput;
 }
 
 export interface SpotWarning {
@@ -127,6 +133,11 @@ export interface SpotResult {
   atmosphereTransmission: number;
   pathTransmission: number;
   clippingTransmission: number;
+  beamCombinerPosition: string;
+  beamCombinerTransmission: number;
+  beamCombinerLossWatt: number;
+  beamCombinerDiameter: number;
+  beamCombinerClipped: boolean;
   spot: number;
   deliveredWatt: number;
   mirrorAbsorbedWatt: number;
@@ -141,8 +152,25 @@ export interface SpotResult {
   wattStressRatio: number;
   stabilityReason: string;
   beamStability: "stable" | "borderline" | "unstable";
+  powerDensityWPerMm2: number;
+  assumptions: string[];
+  opticalStages: SpotOpticalStage[];
   warnings: SpotWarning[];
   graphData: SpotGraphData;
+}
+
+export interface SpotOpticalStage {
+  id: string;
+  labelKey: string;
+  kind: "source" | "combiner" | "mirror" | "lens" | "surface";
+  beamMm: number;
+  energyWatt: number;
+  energyPercent: number;
+  transmission: number;
+  diameterMm?: number;
+  finishLabel?: string;
+  warning?: boolean;
+  assumption?: boolean;
 }
 
 export type AxisKey = "x" | "y";
@@ -151,6 +179,7 @@ export type DriveType = "belt" | "leadScrew" | "direct" | "controllerOnly";
 export type DualMotorMode = "none" | "normalGantry" | "specialRatio";
 
 export interface AxisMechanics {
+  motorPresetId?: string;
   driveType: DriveType;
   motorAngle: NumericInput;
   microstepping: NumericInput;
@@ -199,6 +228,20 @@ export interface AxisIntervalResult {
   clean: boolean;
 }
 
+export interface MotorPreset {
+  id: string;
+  name: string;
+  frameSize: string;
+  stepAngleDeg: number;
+  fullStepsPerRev: number;
+  ratedCurrentA: number | null;
+  holdingTorque: string;
+  shaftType: string;
+  notes: string;
+  sourceUrl: string;
+  estimated: boolean;
+}
+
 export interface AxisSpotResult {
   ratio: number;
   overlap: number;
@@ -215,12 +258,15 @@ export interface AxisWarning {
 export interface AxisGraphData {
   requestedX: number;
   nearestX: number;
+  currentDpiX: number;
   ticks: number[];
 }
 
 export interface AxisResult {
   activeAxisKey: AxisKey;
   activeAxis: AxisMechanics;
+  requestedLineInterval: number | null;
+  requestedDpi: number | null;
   calc: AxisCalc;
   interval: AxisIntervalResult | null;
   spot: AxisSpotResult | null;

@@ -26,6 +26,27 @@ export function getSource(id: string): SourcePreset {
   return sources.find((source) => source.id === id) || sources[0];
 }
 
+function getCalculationSource(values: SpotInputs): SourcePreset {
+  if (values.sourceId) return getSource(values.sourceId);
+  const ratedWatt = Math.max(toNumber(values.manualRatedWatt), toNumber(values.measuredWatt), toNumber(values.peakWatt));
+  return {
+    id: "manual",
+    brand: "Manual",
+    model: "CO2 source",
+    excitation: "DC",
+    ratedWatt,
+    beamMm: Math.max(toNumber(values.manualSourceBeamMm), 0.01),
+    tolerance: "user input",
+    m2: Math.max(toNumber(values.manualM2), 0.01),
+    hzDefault: Math.max(toNumber(values.hz), 1),
+    hzMax: Math.max(toNumber(values.hz), 1),
+    wavelengthUm: 10.6,
+    confidence: "manual/user supplied",
+    sourceLabel: "Manual CO2 source inputs",
+    sourceUrl: "",
+  };
+}
+
 export function getFilteredSources(family: string): SourcePreset[] {
   const sources = SOURCE_LIBRARY as readonly SourcePreset[];
   return sources.filter((source) => family === "all" || source.excitation === family);
@@ -62,7 +83,7 @@ export function calculateSpot(
   finishKey = values.finish,
   wattOverride: number | null = null,
 ): SpotResult {
-  const source = getSource(values.sourceId);
+  const source = getCalculationSource(values);
   const finish = getFinish(values, finishKey);
   const shapes = LENS_SHAPES as Record<string, LensPreset>;
   const shape = shapes[values.lensShape] || shapes.meniscus;
@@ -78,10 +99,18 @@ export function calculateSpot(
   const sourceBeam = source.beamMm;
   const expanderMultiplier = values.useExpander ? Math.max(toNumber(values.expanderMultiplier), 1) : 1;
   const expandedBeam = sourceBeam * expanderMultiplier;
+  const beamCombinerPosition = values.beamCombinerPosition || "none";
+  const hasBeamCombiner = beamCombinerPosition !== "none";
+  const beamCombinerTransmission = hasBeamCombiner
+    ? clamp(toNumber(values.beamCombinerTransmission) / 100, 0.7, 1)
+    : 1;
+  const beamCombinerDiameter = Math.max(toNumber(values.beamCombinerDiameter), 0.01);
+  const beamCombinerClearAperture = beamCombinerDiameter * 0.85;
+  const beamCombinerClipped = hasBeamCombiner && expandedBeam > beamCombinerClearAperture;
   const mirrorClipped = expandedBeam > mirrorClearAperture;
   const lensClipped = expandedBeam > clearAperture;
-  const clipped = mirrorClipped || lensClipped;
-  const effectiveBeam = Math.min(expandedBeam, clearAperture, mirrorClearAperture);
+  const clipped = mirrorClipped || lensClipped || beamCombinerClipped;
+  const effectiveBeam = Math.min(expandedBeam, clearAperture, mirrorClearAperture, hasBeamCombiner ? beamCombinerClearAperture : expandedBeam);
   const powerPercent = clamp(toNumber(values.powerPercent), 0, 100);
   const measuredWattRaw = toNumber(values.measuredWatt);
   const peakWattRaw = toNumber(values.peakWatt);
@@ -119,9 +148,10 @@ export function calculateSpot(
     ? clamp(1 - ((expandedBeam - effectiveBeam) / clippingReference) * 0.18, 0.7, 1)
     : 1;
   const pathTransmission =
-    mirrorTransmission * atmosphereTransmission * alignmentTransmission * clippingTransmission;
+    mirrorTransmission * atmosphereTransmission * alignmentTransmission * clippingTransmission * beamCombinerTransmission;
   const spot = opticalSpot * finish.quality * shape.factor * clippingPenalty * thermalFactor * alignmentSpotPenalty;
   const deliveredWatt = selectedWatt * finish.transmission * pathTransmission;
+  const beamCombinerLossWatt = hasBeamCombiner ? selectedWatt * (1 - beamCombinerTransmission) : 0;
   const mirrorAbsorbedWatt = selectedWatt * (1 - mirrorTransmission);
   const atmosphereLostWatt = selectedWatt * mirrorTransmission * (1 - atmosphereTransmission);
   const alignmentLostWatt =
@@ -188,6 +218,87 @@ export function calculateSpot(
       message: "The expanded beam exceeds a mirror or lens clear aperture, so clipping loss is included.",
     });
   }
+  if (hasBeamCombiner) {
+    warnings.push({
+      code: "beam-combiner-assumption",
+      message: "Beam combiner loss is user-configured; verify the real optic transmission and clear aperture.",
+    });
+  }
+
+  const spotAreaMm2 = Math.PI * Math.pow(Math.max(spot, 0.0001) / 2, 2);
+  const powerDensityWPerMm2 = deliveredWatt / spotAreaMm2;
+  const assumptions = [
+    source.id === "manual" ? "assumptionManualSource" : "assumptionPresetSource",
+    "assumptionMirrorAperture",
+    "assumptionLensAperture",
+    hasBeamCombiner ? "assumptionCombinerEditable" : "assumptionNoCombiner",
+  ];
+  const stagePercent = (energyWatt: number) => (selectedWatt > 0 ? (energyWatt / selectedWatt) * 100 : 0);
+  const opticalStages = [];
+  let stageEnergy = selectedWatt;
+  opticalStages.push({
+    id: "source",
+    labelKey: "stageSource",
+    kind: "source" as const,
+    beamMm: sourceBeam,
+    energyWatt: stageEnergy,
+    energyPercent: stagePercent(stageEnergy),
+    transmission: 1,
+    assumption: source.id === "manual",
+  });
+  if (hasBeamCombiner) {
+    stageEnergy *= beamCombinerTransmission;
+    opticalStages.push({
+      id: "combiner",
+      labelKey: "stageCombiner",
+      kind: "combiner" as const,
+      beamMm: expandedBeam,
+      energyWatt: stageEnergy,
+      energyPercent: stagePercent(stageEnergy),
+      transmission: beamCombinerTransmission,
+      diameterMm: beamCombinerDiameter,
+      warning: beamCombinerClipped,
+      assumption: true,
+    });
+  }
+  Array.from({ length: mirrorCount }, (_, index) => index + 1).forEach((mirrorIndex) => {
+    stageEnergy *= perMirrorReflectivity;
+    opticalStages.push({
+      id: `mirror-${mirrorIndex}`,
+      labelKey: `stageMirror${mirrorIndex}`,
+      kind: "mirror" as const,
+      beamMm: expandedBeam,
+      energyWatt: stageEnergy,
+      energyPercent: stagePercent(stageEnergy),
+      transmission: perMirrorReflectivity,
+      diameterMm: mirrorDiameter,
+      finishLabel: mirror.label,
+      warning: mirrorClipped,
+    });
+  });
+  stageEnergy *= atmosphereTransmission * alignmentTransmission * clippingTransmission * finish.transmission;
+  opticalStages.push({
+    id: "lens",
+    labelKey: "stageLens",
+    kind: "lens" as const,
+    beamMm: effectiveBeam,
+    energyWatt: stageEnergy,
+    energyPercent: stagePercent(stageEnergy),
+    transmission: finish.transmission,
+    diameterMm: lensDiameter,
+    finishLabel: finish.maker,
+    warning: lensClipped,
+  });
+  opticalStages.push({
+    id: "surface",
+    labelKey: "stageSurface",
+    kind: "surface" as const,
+    beamMm: spot,
+    energyWatt: deliveredWatt,
+    energyPercent: stagePercent(deliveredWatt),
+    transmission: deliveredWatt / Math.max(selectedWatt, 1),
+    warning: warnings.length > 0,
+  });
 
   return {
     source,
@@ -228,6 +339,11 @@ export function calculateSpot(
     atmosphereTransmission,
     pathTransmission,
     clippingTransmission,
+    beamCombinerPosition,
+    beamCombinerTransmission,
+    beamCombinerLossWatt,
+    beamCombinerDiameter,
+    beamCombinerClipped,
     spot,
     deliveredWatt,
     mirrorAbsorbedWatt,
@@ -242,6 +358,9 @@ export function calculateSpot(
     wattStressRatio,
     stabilityReason,
     beamStability,
+    powerDensityWPerMm2,
+    assumptions,
+    opticalStages,
     warnings,
     graphData: {
       wattCeiling,

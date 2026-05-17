@@ -435,6 +435,15 @@ details[open] > summary::after {
   align-items: start;
 }
 
+.compact-row {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.preview-row {
+  grid-template-columns: minmax(0, 1fr) minmax(180px, 220px);
+  align-items: stretch;
+}
+
 label {
   display: grid;
   gap: 6px;
@@ -511,6 +520,37 @@ input::placeholder {
   grid-template-columns: 1fr 72px;
   gap: 10px;
   align-items: center;
+}
+
+.power-slider-card {
+  display: grid;
+  gap: 8px;
+  border: 1px solid var(--field-line);
+  border-radius: 8px;
+  padding: 11px;
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--green) 13%, transparent), color-mix(in srgb, var(--amber) 13%, transparent) 78%, color-mix(in srgb, var(--beam) 13%, transparent));
+}
+
+.power-slider-top,
+.power-slider-scale,
+.preview-head,
+.preview-metrics,
+.graph-control-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.power-slider-scale {
+  color: var(--muted);
+  font-size: 0.7rem;
+  font-weight: 800;
+}
+
+.premium-range input[type="range"] {
+  accent-color: var(--beam);
 }
 
 input[type="range"] {
@@ -699,6 +739,109 @@ input[type="range"] {
   min-height: 230px;
 }
 
+.technical-preview {
+  position: relative;
+  display: grid;
+  align-content: start;
+  gap: 6px;
+  min-height: 132px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 9px;
+  background: var(--panel-solid);
+}
+
+.technical-preview svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.preview-head {
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-weight: 900;
+}
+
+.preview-head strong,
+.preview-metrics strong {
+  color: var(--ink);
+}
+
+.preview-metrics {
+  color: var(--muted);
+  font-size: 0.72rem;
+  line-height: 1.3;
+}
+
+.preview-open {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 4px 8px;
+  color: var(--primary);
+  background: var(--panel);
+  cursor: pointer;
+  font-size: 0.7rem;
+  font-weight: 900;
+}
+
+.graph-slider-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  padding: 0 6px 8px;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
+.graph-control-row {
+  justify-content: flex-start;
+  flex-wrap: wrap;
+}
+
+.optical-path-panel {
+  border-top: 1px solid var(--line);
+}
+
+.line-detail {
+  display: grid;
+  gap: 4px;
+  margin: 0 12px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px;
+  color: var(--muted);
+  background: var(--panel);
+  font-size: 0.78rem;
+  line-height: 1.4;
+}
+
+.line-detail strong {
+  color: var(--ink);
+}
+
+.line-detail.ok {
+  border-color: color-mix(in srgb, var(--green) 38%, var(--line));
+}
+
+.line-detail.warn {
+  border-color: color-mix(in srgb, var(--amber) 56%, var(--line));
+  background: color-mix(in srgb, var(--amber) 13%, var(--panel-solid));
+}
+
+.manual-source-block {
+  display: grid;
+  gap: 12px;
+  border: 1px dashed color-mix(in srgb, var(--primary) 42%, var(--line));
+  border-radius: 8px;
+  padding: 11px;
+}
+
 details.graph-collapsible {
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -842,7 +985,12 @@ details.graph-collapsible > summary::after {
 }
 
 .axis-toolbar {
-  grid-template-columns: minmax(240px, 1.15fr) 160px 118px 160px 160px;
+  grid-template-columns: minmax(260px, 1.22fr) minmax(150px, 0.72fr) minmax(120px, 0.5fr) minmax(150px, 0.72fr) minmax(138px, 0.55fr);
+  align-items: stretch;
+}
+
+.axis-toolbar > * {
+  min-height: 100%;
 }
 
 .field-hint {
@@ -854,7 +1002,7 @@ details.graph-collapsible > summary::after {
 
 .alignment-inline-row {
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: minmax(0, 1fr) minmax(130px, 0.55fr);
   gap: 10px;
   align-items: end;
 }
@@ -896,6 +1044,19 @@ details.graph-collapsible > summary::after {
   flex-wrap: wrap;
   gap: 8px;
   justify-content: flex-end;
+}
+
+.motor-spec-panel {
+  display: grid;
+  gap: 6px;
+  border: 1px solid color-mix(in srgb, var(--primary) 24%, var(--line));
+  border-radius: 8px;
+  padding: 11px;
+  background: color-mix(in srgb, var(--primary) 6%, var(--panel-solid));
+}
+
+.motor-spec-panel h3 {
+  font-size: 0.86rem;
 }
 
 .axis-choice {

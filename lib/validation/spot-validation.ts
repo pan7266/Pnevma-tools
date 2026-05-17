@@ -36,6 +36,9 @@ export function validateSpotInputs(input: Partial<SpotInputs>): ValidationResult
     useExpander: Boolean(input.useExpander ?? defaults.useExpander),
   };
 
+  value.manualRatedWatt = coerceNumber(value.manualRatedWatt, "manualRatedWatt", errors, true);
+  value.manualSourceBeamMm = coerceNumber(value.manualSourceBeamMm, "manualSourceBeamMm", errors, true);
+  value.manualM2 = coerceNumber(value.manualM2, "manualM2", errors, true);
   value.measuredWatt = coerceNumber(value.measuredWatt, "measuredWatt", errors, true);
   value.peakWatt = coerceNumber(value.peakWatt, "peakWatt", errors, true);
   value.powerPercent = coerceNumber(value.powerPercent, "powerPercent", errors);
@@ -48,8 +51,10 @@ export function validateSpotInputs(input: Partial<SpotInputs>): ValidationResult
   value.mirrorTempC = coerceNumber(value.mirrorTempC, "mirrorTempC", errors, true);
   value.alignmentLossPercent = coerceNumber(value.alignmentLossPercent, "alignmentLossPercent", errors);
   value.expanderMultiplier = coerceNumber(value.expanderMultiplier, "expanderMultiplier", errors);
+  value.beamCombinerTransmission = coerceNumber(value.beamCombinerTransmission, "beamCombinerTransmission", errors);
+  value.beamCombinerDiameter = coerceNumber(value.beamCombinerDiameter, "beamCombinerDiameter", errors);
 
-  if (!SOURCE_LIBRARY.some((source) => source.id === value.sourceId)) errors.push("sourceId is not a known source preset.");
+  if (value.sourceId && !SOURCE_LIBRARY.some((source) => source.id === value.sourceId)) errors.push("sourceId is not a known source preset.");
   if (!(value.finish in FINISHES)) errors.push("finish is not a known lens finish.");
   if (!(value.lensShape in LENS_SHAPES)) errors.push("lensShape is not a known lens shape.");
   if (!(value.mirrorFinish in MIRROR_FINISHES)) errors.push("mirrorFinish is not a known mirror finish.");
@@ -58,6 +63,15 @@ export function validateSpotInputs(input: Partial<SpotInputs>): ValidationResult
   if (!isPositive(value.focalLength)) errors.push("focalLength must be greater than zero.");
   if (!isPositive(value.mirrorDiameter)) errors.push("mirrorDiameter must be greater than zero.");
   if (!isPositive(value.expanderMultiplier)) errors.push("expanderMultiplier must be greater than zero.");
+  if (!value.sourceId) {
+    if (!isPositive(value.manualRatedWatt) && !isPositive(value.measuredWatt)) errors.push("manualRatedWatt or measuredWatt must be greater than zero without a source preset.");
+    if (!isPositive(value.manualSourceBeamMm)) errors.push("manualSourceBeamMm must be greater than zero without a source preset.");
+    if (!isPositive(value.manualM2)) errors.push("manualM2 must be greater than zero without a source preset.");
+  }
+  if (value.beamCombinerPosition !== "none") {
+    if (!isPositive(value.beamCombinerTransmission)) errors.push("beamCombinerTransmission must be greater than zero.");
+    if (!isPositive(value.beamCombinerDiameter)) errors.push("beamCombinerDiameter must be greater than zero.");
+  }
 
   return { ok: errors.length === 0, value: errors.length ? undefined : value, errors };
 }

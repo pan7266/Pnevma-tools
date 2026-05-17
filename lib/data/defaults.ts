@@ -4,7 +4,10 @@ import type { AxisInputs } from '@/types';
 
 export const spotDefaultValues = {
         family: "all",
-        sourceId: "reci-w4",
+        sourceId: "",
+        manualRatedWatt: "",
+        manualSourceBeamMm: "",
+        manualM2: "",
         measuredWatt: "",
         peakWatt: "",
         powerPercent: 65,
@@ -27,10 +30,14 @@ export const spotDefaultValues = {
         alignmentLossPercent: 4,
         useExpander: false,
         expanderMultiplier: 2,
+        beamCombinerPosition: "none",
+        beamCombinerTransmission: 97,
+        beamCombinerDiameter: 20,
       } as const;
 
 export function axisDefaults(dualMotorMode: AxisInputs['axes']['x']['dualMotorMode']): AxisInputs['axes']['x'] {
   return {
+    motorPresetId: "generic-nema17-09",
     driveType: 'belt',
     motorAngle: 0.9,
     microstepping: 16,

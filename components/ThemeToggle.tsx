@@ -1,16 +1,18 @@
 "use client";
 
 import { useAppSettings } from "@/components/AppSettings";
+import { getLocale } from "@/locales";
 
 export function ThemeToggle() {
-  const { theme, setTheme } = useAppSettings();
+  const { lang, theme, setTheme } = useAppSettings();
+  const labels = getLocale(lang).common;
   return (
-    <div className="segmented" aria-label="Theme">
+    <div className="segmented" aria-label={labels.theme}>
       <button className={theme === "light" ? "active" : ""} type="button" onClick={() => setTheme("light")}>
-        Light
+        {labels.light}
       </button>
       <button className={theme === "dark" ? "active" : ""} type="button" onClick={() => setTheme("dark")}>
-        Dark
+        {labels.dark}
       </button>
     </div>
   );

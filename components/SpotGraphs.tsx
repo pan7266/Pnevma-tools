@@ -4,7 +4,8 @@ import { FINISHES } from "@/lib/data/finishes";
 import { FOCAL_LENGTHS, LENS_DIAMETERS } from "@/lib/data/lenses";
 import { calculateSpot, getFilteredSources } from "@/lib/calculators/spot";
 import { formatCompact, formatLength, formatNumber, formatOptionLength, lengthUnit, mmToInches } from "@/lib/units/convert";
-import type { KeyboardEvent } from "react";
+import { useState } from "react";
+import type { KeyboardEvent, PointerEvent } from "react";
 import type { Lang, SpotInputs, SpotResult, UnitSystem } from "@/types";
 
 function clamp(value: number, min: number, max: number): number {
@@ -17,7 +18,7 @@ interface GraphProps {
   lang: Lang;
   unitSystem: UnitSystem;
   labels: Record<string, string>;
-  onExpand?: (graph: "path" | "beam" | "finish" | "focal" | "source") => void;
+  onExpand?: (graph: "path" | "beam" | "finish" | "focal" | "source" | "pulse" | "expander" | "optical") => void;
   expanded?: boolean;
 }
 
@@ -35,7 +36,10 @@ export function BeamPreview({
   unitSystem,
   onExpand,
   expanded = false,
-}: Pick<GraphProps, "result" | "labels" | "unitSystem" | "onExpand" | "expanded">) {
+  onFocalLengthChange,
+}: Pick<GraphProps, "result" | "labels" | "unitSystem" | "onExpand" | "expanded"> & {
+  onFocalLengthChange?: (value: number) => void;
+}) {
   const centerY = 112;
   const startX = 46;
   const lensX = 286;
@@ -90,6 +94,228 @@ export function BeamPreview({
           {labels.effectiveBeam}: {formatLength(result.effectiveBeam, unitSystem, 2)}
         </text>
       </svg>
+      {onFocalLengthChange ? (
+        <div className="graph-slider-row" onClick={(event) => event.stopPropagation()}>
+          <span>{labels.selectedFocalLength}</span>
+          <input
+            type="range"
+            min="25.4"
+            max="508"
+            step="0.1"
+            value={result.focalLength}
+            aria-label={labels.selectedFocalLength}
+            onChange={(event) => onFocalLengthChange(Number(event.target.value))}
+          />
+          <strong>{formatLength(result.focalLength, unitSystem, 2)}</strong>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+export function PulseHzGraph({
+  hz,
+  selectedWatt,
+  pulseEnergyMj,
+  labels,
+  expanded = false,
+  onHzChange,
+  onExpand,
+}: {
+  hz: number;
+  selectedWatt: number;
+  pulseEnergyMj: number;
+  labels: Record<string, string>;
+  expanded?: boolean;
+  onHzChange: (hz: number) => void;
+  onExpand?: () => void;
+}) {
+  const [zoom, setZoom] = useState(1);
+  const [pan, setPan] = useState(0);
+  const [selectedX, setSelectedX] = useState<number | null>(null);
+  const minHz = 1000;
+  const maxHz = 100000;
+  const width = 520;
+  const height = expanded ? 300 : 160;
+  const axisLeft = 42;
+  const axisRight = width - 24;
+  const axisW = axisRight - axisLeft;
+  const normalizedHz = clamp((hz - minHz) / (maxHz - minHz), 0, 1);
+  const barX = axisLeft + normalizedHz * axisW;
+  const cycles = expanded ? 5 * zoom : 3;
+  const path = Array.from({ length: 90 }, (_, index) => {
+    const ratio = index / 89;
+    const x = axisLeft + ratio * axisW;
+    const y = height / 2 + Math.sin((ratio * cycles + pan) * Math.PI * 2) * (expanded ? 72 : 38);
+    return `${index === 0 ? "M" : "L"}${x.toFixed(1)} ${y.toFixed(1)}`;
+  }).join(" ");
+
+  function pickHz(clientX: number, currentTarget: SVGSVGElement) {
+    const rect = currentTarget.getBoundingClientRect();
+    const ratio = clamp((clientX - rect.left - axisLeft * (rect.width / width)) / (axisW * (rect.width / width)), 0, 1);
+    onHzChange(Math.round((minHz + ratio * (maxHz - minHz)) / 100) * 100);
+    setSelectedX(axisLeft + ratio * axisW);
+  }
+
+  return (
+    <div className={`technical-preview pulse-preview ${expanded ? "expanded" : ""}`}>
+      <div className="preview-head">
+        <span>{labels.pulseGraphTitle}</span>
+        <strong>{formatCompact(hz, 0)} Hz</strong>
+      </div>
+      <svg
+        viewBox={`0 0 ${width} ${height}`}
+        role="img"
+        aria-label={labels.pulseGraphTitle}
+        onClick={(event) => {
+          event.stopPropagation();
+          if (!expanded) {
+            onExpand?.();
+            return;
+          }
+          pickHz(event.clientX, event.currentTarget);
+        }}
+        onPointerDown={(event: PointerEvent<SVGSVGElement>) => {
+          if (!expanded) return;
+          event.currentTarget.setPointerCapture(event.pointerId);
+          pickHz(event.clientX, event.currentTarget);
+        }}
+        onPointerMove={(event: PointerEvent<SVGSVGElement>) => {
+          if (!expanded || event.buttons !== 1) return;
+          pickHz(event.clientX, event.currentTarget);
+        }}
+      >
+        <rect width={width} height={height} fill="transparent" />
+        <line x1={axisLeft} x2={axisRight} y1={height / 2} y2={height / 2} stroke="var(--axis)" strokeWidth="1.5" />
+        <path d={path} fill="none" stroke="var(--primary)" strokeWidth={expanded ? 3 : 2.2} />
+        <line x1={barX} x2={barX} y1="20" y2={height - 26} stroke="var(--beam)" strokeWidth="4" strokeLinecap="round">
+          <title>{labels.pulseSelectedHz}: {formatCompact(hz, 0)} Hz</title>
+        </line>
+        {selectedX ? <circle cx={selectedX} cy={height / 2} r="5" fill="var(--beam)" /> : null}
+        <text x={axisLeft} y={height - 8} fill="var(--muted)" fontSize="11">{formatCompact(minHz, 0)} Hz</text>
+        <text x={axisRight} y={height - 8} fill="var(--muted)" fontSize="11" textAnchor="end">{formatCompact(maxHz, 0)} Hz</text>
+      </svg>
+      <div className="preview-metrics">
+        <span>{labels.pulseEnergyPerPulse}: <strong>{formatNumber(pulseEnergyMj, 3)} mJ</strong></span>
+        <span>{labels.selectedWatt}: <strong>{formatCompact(selectedWatt, 2)} W</strong></span>
+      </div>
+      {expanded ? (
+        <div className="graph-control-row">
+          <button type="button" className="mini-button" onClick={() => setZoom((value) => clamp(value + 0.25, 0.5, 4))}>{labels.zoomIn}</button>
+          <button type="button" className="mini-button" onClick={() => setZoom((value) => clamp(value - 0.25, 0.5, 4))}>{labels.zoomOut}</button>
+          <button type="button" className="mini-button" onClick={() => setPan((value) => value - 0.12)}>{labels.panLeft}</button>
+          <button type="button" className="mini-button" onClick={() => setPan((value) => value + 0.12)}>{labels.panRight}</button>
+        </div>
+      ) : onExpand ? (
+        <button type="button" className="preview-open" onClick={onExpand}>{labels.expandGraph}</button>
+      ) : null}
+    </div>
+  );
+}
+
+export function LensShapePreview({ shape, labels }: { shape: string; labels: Record<string, string> }) {
+  const convex = shape === "convex";
+  return (
+    <div className="technical-preview optic-preview" aria-label={labels.lensPreviewTitle}>
+      <div className="preview-head"><span>{labels.lensPreviewTitle}</span><strong>{convex ? labels.convex : labels.meniscus}</strong></div>
+      <svg viewBox="0 0 220 130" role="img">
+        <rect width="220" height="130" fill="transparent" />
+        <line x1="18" x2="202" y1="65" y2="65" stroke="var(--axis)" strokeDasharray="5 6" />
+        <path d={convex ? "M104 20 C64 35 64 95 104 110 C144 95 144 35 104 20Z" : "M91 20 C52 38 52 92 91 110 L126 110 C108 86 108 44 126 20Z"} fill="color-mix(in srgb, var(--primary) 28%, var(--panel-solid))" stroke="var(--primary)" strokeWidth="2" />
+        <path d="M18 34 L104 49 L202 65 M18 96 L104 81 L202 65" fill="none" stroke="var(--beam)" strokeWidth="1.8" />
+      </svg>
+    </div>
+  );
+}
+
+export function MirrorFinishPreview({ label, reflectivity, labels }: { label: string; reflectivity: number; labels: Record<string, string> }) {
+  return (
+    <div className="technical-preview optic-preview" aria-label={labels.mirrorPreviewTitle}>
+      <div className="preview-head"><span>{labels.mirrorPreviewTitle}</span><strong>{formatCompact(reflectivity * 100, 2)}%</strong></div>
+      <svg viewBox="0 0 220 130" role="img">
+        <defs>
+          <linearGradient id="mirror-sheen" x1="0" x2="1">
+            <stop offset="0" stopColor="var(--panel-solid)" />
+            <stop offset="0.48" stopColor="var(--primary)" stopOpacity="0.42" />
+            <stop offset="1" stopColor="var(--amber)" stopOpacity="0.62" />
+          </linearGradient>
+        </defs>
+        <rect width="220" height="130" fill="transparent" />
+        <g transform="translate(80 24) rotate(-35 34 42)">
+          <rect x="0" y="0" width="68" height="84" rx="8" fill="url(#mirror-sheen)" stroke="var(--line)" strokeWidth="2" />
+          <line x1="13" x2="55" y1="18" y2="18" stroke="var(--panel-solid)" opacity="0.55" />
+          <line x1="13" x2="55" y1="34" y2="34" stroke="var(--panel-solid)" opacity="0.35" />
+        </g>
+        <path d="M24 94 L97 72 L196 34" fill="none" stroke="var(--beam)" strokeWidth="2" />
+        <text x="110" y="116" fill="var(--muted)" fontSize="11" textAnchor="middle">{label}</text>
+      </svg>
+    </div>
+  );
+}
+
+export function ExpanderGraph({ result, labels, unitSystem, onExpand }: Pick<GraphProps, "result" | "labels" | "unitSystem" | "onExpand">) {
+  const open = onExpand ? () => onExpand("expander") : undefined;
+  const inHalf = clamp(result.sourceBeam * 6, 12, 46);
+  const outHalf = clamp(result.expandedBeam * 4, 14, 62);
+  return (
+    <div className="technical-preview expander-preview clickable-graph-hero" role={open ? "button" : undefined} tabIndex={open ? 0 : undefined} onClick={open} onKeyDown={(event) => graphKeydown(event, open)}>
+      <div className="preview-head"><span>{labels.expanderGraphTitle}</span><strong>{formatCompact(result.expanderMultiplier, 2)}x</strong></div>
+      <svg viewBox="0 0 520 170" role="img" aria-label={labels.expanderGraphTitle}>
+        <rect width="520" height="170" fill="transparent" />
+        <path d={`M32 ${85 - inHalf} L178 ${85 - inHalf} L332 ${85 - outHalf} L488 ${85 - outHalf}`} fill="none" stroke="var(--beam)" strokeWidth="2" />
+        <path d={`M32 ${85 + inHalf} L178 ${85 + inHalf} L332 ${85 + outHalf} L488 ${85 + outHalf}`} fill="none" stroke="var(--beam)" strokeWidth="2" />
+        <rect x="178" y="40" width="44" height="90" rx="8" fill="color-mix(in srgb, var(--primary) 20%, var(--panel-solid))" stroke="var(--primary)" />
+        <rect x="288" y="28" width="44" height="114" rx="8" fill="color-mix(in srgb, var(--green) 20%, var(--panel-solid))" stroke="var(--green)" />
+        <text x="32" y="24" fill="var(--muted)" fontSize="11">{labels.sourceBeam}: {formatLength(result.sourceBeam, unitSystem, 2)}</text>
+        <text x="488" y="24" fill={result.clipped ? "var(--amber)" : "var(--muted)"} fontSize="11" textAnchor="end">{labels.expandedBeam}: {formatLength(result.expandedBeam, unitSystem, 2)}</text>
+        {result.clipped ? <text x="260" y="156" fill="var(--amber)" fontSize="12" fontWeight="900" textAnchor="middle">{labels.expandedTooLarge}</text> : null}
+      </svg>
+    </div>
+  );
+}
+
+export function OpticalPathGraph({ result, labels, unitSystem, onExpand, expanded = false }: Pick<GraphProps, "result" | "labels" | "unitSystem" | "onExpand" | "expanded">) {
+  const [selectedId, setSelectedId] = useState(result.opticalStages[0]?.id || "source");
+  const open = onExpand ? () => onExpand("optical") : undefined;
+  const selected = result.opticalStages.find((stage) => stage.id === selectedId) || result.opticalStages[0];
+  const points = result.opticalStages.map((stage, index) => {
+    const x = 58 + index * (684 / Math.max(result.opticalStages.length - 1, 1));
+    const y = index < 4 ? 82 : 158;
+    return { stage, x, y };
+  });
+  return (
+    <div className={`graph-panel optical-path-panel ${expanded ? "expanded" : ""}`}>
+      <div className="graph-head">
+        <div>
+          <h2>{labels.fullOpticalPathTitle}</h2>
+          <p>{labels.assumptionsTitle}</p>
+        </div>
+      </div>
+      <svg className="graph optical-path-graph" viewBox="0 0 820 320" role="img" aria-label={labels.fullOpticalPathTitle} onClick={open}>
+        <rect width="820" height="320" fill="transparent" />
+        <polyline points={points.map((point) => `${point.x},${point.y}`).join(" ")} fill="none" stroke="var(--beam)" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+        {points.map(({ stage, x, y }) => (
+          <g key={stage.id} role="button" tabIndex={0} onClick={(event) => {
+            event.stopPropagation();
+            setSelectedId(stage.id);
+          }} onKeyDown={(event) => {
+            if (event.key === "Enter" || event.key === " ") setSelectedId(stage.id);
+          }}>
+            <circle cx={x} cy={y} r={selectedId === stage.id ? 22 : 17} fill={stage.warning ? "var(--amber)" : stage.kind === "surface" ? "var(--green)" : "var(--panel-solid)"} stroke={stage.kind === "source" ? "var(--beam)" : "var(--primary)"} strokeWidth="3">
+              <title>{labels[stage.labelKey]} · {labels.energyAfterStage}: {formatCompact(stage.energyWatt, 2)} W</title>
+            </circle>
+            <text x={x} y={y + 44} fill="var(--ink)" fontSize="11" fontWeight="900" textAnchor="middle">{labels[stage.labelKey]}</text>
+            <text x={x} y={y + 60} fill="var(--muted)" fontSize="10" textAnchor="middle">{formatCompact(stage.energyPercent, 1)}%</text>
+          </g>
+        ))}
+      </svg>
+      {selected ? (
+        <div className={`line-detail ${selected.warning ? "warn" : "ok"}`}>
+          <strong>{labels[selected.labelKey]} · {labels.energyAfterStage}: {formatCompact(selected.energyWatt, 2)} W ({formatCompact(selected.energyPercent, 1)}%)</strong>
+          <span>{labels.beamDiameter}: {formatLength(selected.beamMm, unitSystem, selected.kind === "surface" ? 4 : 2)} · {labels.transmission}: {formatCompact(selected.transmission * 100, 2)}%</span>
+          {selected.diameterMm ? <span>{labels.warningAperture}: {formatLength(selected.beamMm, unitSystem, 2)} / {formatLength(selected.diameterMm, unitSystem, 2)}</span> : null}
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -111,7 +337,7 @@ export function PowerPathGraph({ result, labels, onExpand, expanded = false }: P
   return (
     <div
       className={`hero-rail clickable-graph-hero ${expanded ? "expanded" : ""}`}
-      aria-label="Power path graph"
+      aria-label={labels.pathGraphTitle}
       role={open ? "button" : undefined}
       tabIndex={open ? 0 : undefined}
       onClick={open}

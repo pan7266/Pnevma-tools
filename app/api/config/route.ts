@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 import { axisDefaultValues, spotDefaultValues } from "@/lib/data/defaults";
 import { FINISHES, MIRROR_FINISHES } from "@/lib/data/finishes";
-import { AXIS_TEXT, SPOT_INFO, SPOT_TEXT } from "@/lib/data/i18n";
 import { FOCAL_LENGTHS, LENS_DIAMETERS, LENS_SHAPES } from "@/lib/data/lenses";
 import { MIRROR_DIAMETERS, MIRROR_COUNT_PRESETS } from "@/lib/data/mirrors";
+import { MOTOR_PRESETS } from "@/lib/data/motors";
 import {
   CLEAN_MICROSTEP_COUNTS,
   DPI_TARGETS,
@@ -14,6 +14,7 @@ import {
 } from "@/lib/data/options";
 import { SOURCE_LIBRARY } from "@/lib/data/sources";
 import { EXPERIMENTAL_NOTICE, OWNER } from "@/lib/data/terms";
+import { AXIS_TEXT, LOCALES, SPOT_INFO, SPOT_TEXT } from "@/locales";
 
 export function GET() {
   return NextResponse.json({
@@ -37,8 +38,10 @@ export function GET() {
       defaults: axisDefaultValues,
       dpiTargets: DPI_TARGETS,
       cleanMicrostepCounts: CLEAN_MICROSTEP_COUNTS,
+      motorPresets: MOTOR_PRESETS,
     },
     i18n: {
+      locales: LOCALES,
       spotText: SPOT_TEXT,
       spotInfo: SPOT_INFO,
       axisText: AXIS_TEXT,
