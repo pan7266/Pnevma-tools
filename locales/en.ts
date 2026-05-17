@@ -24,6 +24,11 @@ export const en: LocalePack = {
   },
   spot: {
     ...SPOT_TEXT.en,
+    lampCalibration: "Lamp calibration",
+    measuredWatt: "Exact measured watt",
+    peakWatt: "Peak watt",
+    ampValue: "Tube current mA",
+    spotHeaderTitle: "CO2 source and measurement",
     brand: "Brand",
     model: "Model",
     excitation: "Excitation",
@@ -54,6 +59,8 @@ export const en: LocalePack = {
     pulseGraphSub: "Pulse spacing and energy per pulse from selected watt and Hz.",
     pulseSelectedHz: "Selected Hz",
     pulseEnergyPerPulse: "Energy per pulse",
+    hzZoomSlider: "Hz zoom selector",
+    expandGraphPlus: "Open larger graph",
     zoomIn: "Zoom in",
     zoomOut: "Zoom out",
     panLeft: "Pan left",
@@ -87,6 +94,8 @@ export const en: LocalePack = {
     combinerDiameter: "Combiner diameter",
     combinerEffect: "Combiner effect",
     alignmentImpact: "Alignment impact",
+    commonLoss: "common",
+    alignmentLossHint: "Common alignment allowances are 3%, 4%, and 5%.",
     distanceToMaterial: "Distance to material surface",
     selectedFocalLength: "Selected focal length",
     selectedPoint: "Selected point",
@@ -115,6 +124,7 @@ export const en: LocalePack = {
   },
   axis: {
     ...AXIS_TEXT.en,
+    controllerStepsInput: "Controller steps",
     status: "Status",
     dpi: "DPI",
     intervalAxis: "Interval axis",
@@ -127,7 +137,7 @@ export const en: LocalePack = {
     scanModeDescription: "Choose which machine axis moves between engraving scan lines.",
     lineIntervalDescription: "Distance between neighbouring engraved scan lines. Editing this value recalculates DPI.",
     dpiDescription: "Dots per inch equivalent. Editing DPI recalculates the line interval.",
-    spotDiameterDescription: "Optional focused beam spot diameter used only for overlap guidance.",
+    spotDiameterDescription: "Focused beam spot diameter used only for overlap guidance.",
     driveTypeDescription: "Select how this axis converts motor rotation into linear motion.",
     motorAngleDescription: "Motor full-step angle from the motor label or datasheet.",
     microsteppingDescription: "Driver microstep setting, for example 8, 16, 32, or 64.",
@@ -142,6 +152,8 @@ export const en: LocalePack = {
     secondPulleyTeethDescription: "Second motor pulley teeth for dual-motor belt setups.",
     secondMicrosteppingDescription: "Second driver microstep setting for dual-motor setups.",
     motorPreset: "Motor preset",
+    secondMotorPreset: "Second motor preset",
+    motorDetails: "Motor details",
     selectedMotorSpecs: "Selected motor specs",
     frameSize: "Frame size",
     stepAngle: "Step angle",
@@ -165,5 +177,63 @@ export const en: LocalePack = {
     mismatchWarning: "Current line interval and the nearest clean interval do not match.",
     clickLineHint: "Click or tap a line to inspect it.",
     noIntervalResult: "Calculate a valid interval to see line selection.",
+  },
+  legal: {
+    owner: "Owner: Pnevma",
+    backToTools: "Back to tools",
+    privacy: {
+      title: "Privacy Policy",
+      subtitle: "Compact privacy information for the local Pnevma Tools web app.",
+      sections: [
+        {
+          title: "Data processed locally",
+          body: [
+            "Calculator values are used to produce engineering estimates in your browser and through the local REST endpoints.",
+            "The app may save calculator values in this browser so changing tools does not reset your work.",
+          ],
+        },
+        {
+          title: "No accounts or database",
+          body: [
+            "Pnevma Tools does not include authentication, user accounts, tracking pixels, or a database in this project.",
+            "External source links open only when you choose to click them.",
+          ],
+        },
+        {
+          title: "Your responsibility",
+          body: [
+            "Do not enter private customer, safety-critical, or regulated data unless you control the environment where the app runs.",
+            "Verify important machine settings with real measurements and manufacturer documentation.",
+          ],
+        },
+      ],
+    },
+    terms: {
+      title: "Terms",
+      subtitle: "Use terms for the Pnevma Tools calculators.",
+      sections: [
+        {
+          title: "Engineering estimates",
+          body: [
+            "The calculators provide simplified engineering estimates for workshop planning.",
+            "Results can differ from real CO2 laser behavior because of tube age, optics, cooling, alignment, smoke, controller behavior, and measurement method.",
+          ],
+        },
+        {
+          title: "Verification required",
+          body: [
+            "You must verify important settings with real machine tests, safe procedures, and manufacturer documentation.",
+            "The calculators are not safety systems, certified metrology tools, or replacements for professional service.",
+          ],
+        },
+        {
+          title: "No warranty",
+          body: [
+            "Pnevma provides these tools without warranty of accuracy, fitness for a particular purpose, uptime, or compatibility.",
+            "Pnevma is not liable for damage, injury, lost material, lost production, incorrect settings, or other losses from use or misuse.",
+          ],
+        },
+      ],
+    },
   },
 };

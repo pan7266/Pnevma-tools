@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useAppSettings } from "@/components/AppSettings";
 import { LanguageToggle } from "@/components/LanguageToggle";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { AxisIcon, PnevmaMark, SpotIcon } from "@/components/ToolIcons";
 import { UnitToggle } from "@/components/UnitToggle";
 import { getLocale } from "@/locales";
 
@@ -15,25 +16,14 @@ function getTools(labels: Record<string, string>) {
     key: "spot",
     name: labels.spotToolName,
     meta: labels.spotToolMeta,
-    icon: (
-      <svg viewBox="0 0 24 24" aria-hidden="true">
-        <path d="M4 12h7" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-        <path d="M13 12h7" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-        <circle cx="12" cy="12" r="2.5" fill="currentColor" />
-      </svg>
-    ),
+    icon: <SpotIcon />,
   },
   {
     href: "/axis",
     key: "axis",
     name: labels.axisToolName,
     meta: labels.axisToolMeta,
-    icon: (
-      <svg viewBox="0 0 24 24" aria-hidden="true">
-        <path d="M4 17h16M4 12h16M4 7h16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-        <path d="M8 5v14M16 5v14" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-      </svg>
-    ),
+    icon: <AxisIcon />,
   },
   ];
 }
@@ -49,11 +39,7 @@ export function Sidebar() {
     <aside className="sidebar" aria-label={labels.sidebarAria}>
       <div className="workspace-brand">
         <div className="brand-mark" aria-hidden="true">
-          <svg viewBox="0 0 64 64">
-            <path d="M10 43L32 10l22 43H10Z" fill="none" stroke="#f5b45b" strokeWidth="4" strokeLinejoin="round" />
-            <path d="M21 40h22" stroke="#66a3ff" strokeWidth="5" strokeLinecap="round" />
-            <circle cx="32" cy="32" r="4" fill="#ffffff" />
-          </svg>
+          <PnevmaMark />
         </div>
         <div>
           <strong>{labels.appName}</strong>

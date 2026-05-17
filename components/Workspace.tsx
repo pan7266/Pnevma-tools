@@ -31,8 +31,8 @@ function WorkspaceShell({ children }: { children: React.ReactNode }) {
         <section className="tool-shell">
           {children}
           <footer className="app-footer">
-            <a href="#privacy">{labels.privacyPolicy}</a>
-            <a href="#terms">{labels.terms}</a>
+            <a href="/privacy">{labels.privacyPolicy}</a>
+            <a href="/terms">{labels.terms}</a>
             <span>{labels.footerNote}</span>
           </footer>
         </section>

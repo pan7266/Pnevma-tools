@@ -180,6 +180,7 @@ export type DualMotorMode = "none" | "normalGantry" | "specialRatio";
 
 export interface AxisMechanics {
   motorPresetId?: string;
+  secondMotorPresetId?: string;
   driveType: DriveType;
   motorAngle: NumericInput;
   microstepping: NumericInput;

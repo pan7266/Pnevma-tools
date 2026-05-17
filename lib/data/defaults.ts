@@ -38,6 +38,7 @@ export const spotDefaultValues = {
 export function axisDefaults(dualMotorMode: AxisInputs['axes']['x']['dualMotorMode']): AxisInputs['axes']['x'] {
   return {
     motorPresetId: "generic-nema17-09",
+    secondMotorPresetId: "generic-nema17-09",
     driveType: 'belt',
     motorAngle: 0.9,
     microstepping: 16,

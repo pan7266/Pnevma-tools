@@ -69,10 +69,14 @@ export function EngravingLineGraph({
   result,
   labels,
   unitSystem,
+  expanded = false,
+  onExpand,
 }: {
   result: AxisResult;
   labels: Record<string, string>;
   unitSystem: UnitSystem;
+  expanded?: boolean;
+  onExpand?: () => void;
 }) {
   const graph = result.graphData;
   const interval = result.interval;
@@ -110,7 +114,13 @@ export function EngravingLineGraph({
   const selectedLine = lines.find((line) => line.id === selected) || lines[1];
 
   return (
-    <div className="graph-panel engraving-line-panel">
+    <div
+      className={`graph-panel engraving-line-panel clickable-graph-hero ${expanded ? "expanded" : ""}`}
+      role={onExpand ? "button" : undefined}
+      tabIndex={onExpand ? 0 : undefined}
+      onClick={onExpand}
+      onKeyDown={(event) => graphKeydown(event, onExpand)}
+    >
       <div className="graph-head">
         <div>
           <h2>{labels.engravingLineGraphTitle}</h2>
@@ -127,11 +137,14 @@ export function EngravingLineGraph({
         })}
         <line x1="64" x2="756" y1="252" y2="252" stroke="var(--axis)" strokeWidth="2" />
         {lines.map((line) => (
-          <g key={line.id} role="button" tabIndex={0} onClick={() => setSelected(line.id)} onKeyDown={(event) => {
+          <g key={line.id} role="button" tabIndex={0} onClick={(event) => {
+            event.stopPropagation();
+            setSelected(line.id);
+          }} onKeyDown={(event) => {
             if (event.key === "Enter" || event.key === " ") setSelected(line.id);
           }}>
             <line x1={line.x} x2={line.x} y1="34" y2="258" stroke={line.color} strokeWidth={selected === line.id ? 5 : 3} strokeDasharray={line.dash} strokeLinecap="round">
-              <title>{line.label}: {formatLength(line.value, unitSystem, 6)}</title>
+              <title>{line.label}: {formatLength(line.value, unitSystem, 4)}</title>
             </line>
             <circle cx={line.x} cy="252" r={selected === line.id ? 7 : 5} fill={line.color} stroke="var(--panel-solid)" strokeWidth="2" />
             <text x={line.x} y={line.id === "nearest" ? 286 : 274} fill={line.color} fontSize="11" fontWeight="900" textAnchor="middle">
@@ -143,14 +156,14 @@ export function EngravingLineGraph({
           <g>
             <path d={`M${graph.requestedX} 78 C${(graph.requestedX + graph.nearestX) / 2} 54 ${(graph.requestedX + graph.nearestX) / 2} 54 ${graph.nearestX} 78`} fill="none" stroke="var(--amber)" strokeWidth="2" strokeDasharray="5 5" />
             <text x={(graph.requestedX + graph.nearestX) / 2} y="50" fill="var(--amber)" fontSize="12" fontWeight="900" textAnchor="middle">
-              {labels.deviation}: {formatLength(Math.abs(interval.errorMm), unitSystem, 6)} / {formatCompact(Math.abs(interval.errorPercent), 3)}%
+              {labels.deviation}: {formatLength(Math.abs(interval.errorMm), unitSystem, 4)} / {formatCompact(Math.abs(interval.errorPercent), 3)}%
             </text>
           </g>
         ) : null}
       </svg>
       <div className={`line-detail ${mismatch ? "warn" : "ok"}`}>
-        <strong>{selectedLine.label}: {formatLength(selectedLine.value, unitSystem, 6)}</strong>
-        <span>{labels.nearestMechanicalInterval}: {formatLength(interval.nearestCleanInterval, unitSystem, 6)} · {labels.deviation}: {formatLength(Math.abs(interval.errorMm), unitSystem, 6)} · {labels.deviationPercent}: {formatCompact(Math.abs(interval.errorPercent), 3)}%</span>
+        <strong>{selectedLine.label}: {formatLength(selectedLine.value, unitSystem, 4)}</strong>
+        <span>{labels.nearestMechanicalInterval}: {formatLength(interval.nearestCleanInterval, unitSystem, 4)} · {labels.deviation}: {formatLength(Math.abs(interval.errorMm), unitSystem, 4)} · {labels.deviationPercent}: {formatCompact(Math.abs(interval.errorPercent), 3)}%</span>
         <p>{mismatch ? labels.whyNearestBetter : labels.cleanExplanation}</p>
       </div>
     </div>

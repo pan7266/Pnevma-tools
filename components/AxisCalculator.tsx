@@ -1,9 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import type { ReactNode } from "react";
 import { useAppSettings } from "@/components/AppSettings";
 import { AxisIntervalGraph, EngravingLineGraph } from "@/components/AxisGraphs";
 import { GraphModal } from "@/components/GraphModal";
+import { AxisIcon } from "@/components/ToolIcons";
 import { InfoButton } from "@/components/ui/InfoButton";
 import { MetricCard } from "@/components/ui/MetricCard";
 import { calculateAxisFromApi } from "@/lib/api/axis-client";
@@ -21,9 +23,11 @@ import {
   parseStepsPerLengthValue,
 } from "@/lib/units/convert";
 import { getLocale } from "@/locales";
-import type { AxisInputs, AxisKey, AxisMechanics, AxisResult, Lang, NumericInput } from "@/types";
+import type { AxisInputs, AxisKey, AxisMechanics, AxisResult, MotorPreset, NumericInput } from "@/types";
 
-type InfoModal = { title: string; body: string } | null;
+type InfoModal = { title: string; body?: string; content?: ReactNode } | null;
+type AxisGraphModal = "interval" | "engraving" | null;
+const AXIS_STORAGE_KEY = "pnevma.axis.values.v3";
 
 const BELT_PITCH_PRESETS = [
   { key: "MXL", label: "MXL", mm: 2.032 },
@@ -43,8 +47,13 @@ function rounded(value: number, decimals = 8): number {
   return Number(value.toFixed(decimals));
 }
 
+function displayDpiValue(value: NumericInput) {
+  const parsed = parsePositive(value);
+  return parsed ? parsed.toFixed(1) : value ?? "";
+}
+
 function inputPlaceholder(example: string) {
-  return `(${example})`;
+  return example;
 }
 
 function labelWithUnit(label: string, unit: string) {
@@ -57,12 +66,11 @@ function labelWithUnit(label: string, unit: string) {
 }
 
 function stepsLabel(label: string, unit: string) {
-  const optional = /\boptional\b/i.test(label);
   const cleaned = label
     .replace(/\s*\boptional\b/gi, "")
     .replace(/steps\/(mm|in)/gi, "steps")
     .trim();
-  return `${cleaned}/${unit}${optional ? " optional" : ""}`;
+  return `${cleaned}/${unit}`;
 }
 
 function distancePerMicrostepLabel(label: string, unit: string) {
@@ -86,7 +94,7 @@ function Field({
   placeholder?: string;
   description: string;
   onChange: (value: string) => void;
-  onInfo: (modal: { title: string; body: string }) => void;
+  onInfo: (modal: Exclude<InfoModal, null>) => void;
 }) {
   return (
     <label>
@@ -120,7 +128,7 @@ function SelectField({
   options: Array<[string, string]>;
   description: string;
   onChange: (value: string) => void;
-  onInfo: (modal: { title: string; body: string }) => void;
+  onInfo: (modal: Exclude<InfoModal, null>) => void;
 }) {
   return (
     <label>
@@ -135,6 +143,21 @@ function SelectField({
       </select>
       <span className="field-hint">{description}</span>
     </label>
+  );
+}
+
+function motorDetailsContent(preset: MotorPreset, labels: Record<string, string>) {
+  return (
+    <div className="lamp-details">
+      <div className="kv"><span>{labels.frameSize}</span><span>{preset.frameSize}</span></div>
+      <div className="kv"><span>{labels.stepAngle}</span><span>{preset.stepAngleDeg} deg</span></div>
+      <div className="kv"><span>{labels.fullSteps}</span><span>{preset.fullStepsPerRev}</span></div>
+      <div className="kv"><span>{labels.ratedCurrent}</span><span>{preset.ratedCurrentA ? `${preset.ratedCurrentA} A` : labels.unknown}</span></div>
+      <div className="kv"><span>{labels.holdingTorque}</span><span>{preset.holdingTorque}</span></div>
+      <div className="kv"><span>{labels.shaftType}</span><span>{preset.shaftType}</span></div>
+      <p className="small">{preset.notes} {preset.estimated ? `(${labels.estimated})` : ""}</p>
+      {preset.sourceUrl ? <a className="button source-link-button" href={preset.sourceUrl} target="_blank" rel="noreferrer">{labels.sourceLink}</a> : null}
+    </div>
   );
 }
 
@@ -153,7 +176,7 @@ function AxisCard({
   labels: Record<string, string>;
   unitSystem: AxisInputs["unitSystem"];
   onChange: (axisKey: AxisKey, field: keyof AxisMechanics, value: string) => void;
-  onInfo: (modal: { title: string; body: string }) => void;
+  onInfo: (modal: Exclude<InfoModal, null>) => void;
 }) {
   const isControllerOnly = axis.driveType === "controllerOnly";
   const showBelt = axis.driveType === "belt";
@@ -196,30 +219,29 @@ function AxisCard({
         />
         {!isControllerOnly ? (
           <>
-            <SelectField
-              label={labels.motorPreset}
-              value={axis.motorPresetId || ""}
-              description={labels.manualOverride}
-              onInfo={onInfo}
-              onChange={(value) => onChange(axisKey, "motorPresetId", value)}
-              options={[
-                ["", labels.manualOverride],
-                ...MOTOR_PRESETS.map((preset) => [preset.id, `${preset.name} (${preset.frameSize}, ${preset.stepAngleDeg} deg)`] as [string, string]),
-              ]}
-            />
-            {motorPreset ? (
-              <article className="motor-spec-panel">
-                <h3>{labels.selectedMotorSpecs}</h3>
-                <div className="kv"><span>{labels.frameSize}</span><span>{motorPreset.frameSize}</span></div>
-                <div className="kv"><span>{labels.stepAngle}</span><span>{motorPreset.stepAngleDeg} deg</span></div>
-                <div className="kv"><span>{labels.fullSteps}</span><span>{motorPreset.fullStepsPerRev}</span></div>
-                <div className="kv"><span>{labels.ratedCurrent}</span><span>{motorPreset.ratedCurrentA ? `${motorPreset.ratedCurrentA} A` : labels.unknown}</span></div>
-                <div className="kv"><span>{labels.holdingTorque}</span><span>{motorPreset.holdingTorque}</span></div>
-                <div className="kv"><span>{labels.shaftType}</span><span>{motorPreset.shaftType}</span></div>
-                <p className="small">{motorPreset.notes} {motorPreset.estimated ? `(${labels.estimated})` : ""}</p>
-                {motorPreset.sourceUrl ? <a className="source-link-button" href={motorPreset.sourceUrl} target="_blank" rel="noreferrer">{labels.sourceLink}</a> : null}
-              </article>
-            ) : null}
+            <div className="source-select-row motor-preset-row">
+              <SelectField
+                label={labels.motorPreset}
+                value={axis.motorPresetId || ""}
+                description={labels.manualOverride}
+                onInfo={onInfo}
+                onChange={(value) => onChange(axisKey, "motorPresetId", value)}
+                options={[
+                  ["", labels.manualOverride],
+                  ...MOTOR_PRESETS.map((preset) => [preset.id, `${preset.name} (${preset.frameSize}, ${preset.stepAngleDeg} deg)`] as [string, string]),
+                ]}
+              />
+              <button
+                className="mini-button"
+                type="button"
+                disabled={!motorPreset}
+                onClick={() => {
+                  if (motorPreset) onInfo({ title: `${labels.motorDetails}: ${motorPreset.name}`, content: motorDetailsContent(motorPreset, labels) });
+                }}
+              >
+                {labels.motorDetails}
+              </button>
+            </div>
             <Field label={labels.motorAngle} step="0.0001" placeholder="0.9" value={axis.motorAngle} description={desc("motorAngle")} onInfo={onInfo} onChange={(value) => onChange(axisKey, "motorAngle", value)} />
             <Field label={labels.microstepping} step="1" placeholder="16" value={axis.microstepping} description={desc("microstepping")} onInfo={onInfo} onChange={(value) => onChange(axisKey, "microstepping", value)} />
           </>
@@ -287,6 +309,17 @@ function AxisCard({
         />
         {showDual ? (
           <>
+            <SelectField
+              label={labels.secondMotorPreset}
+              value={axis.secondMotorPresetId || axis.motorPresetId || ""}
+              description={labels.manualOverride}
+              onInfo={onInfo}
+              onChange={(value) => onChange(axisKey, "secondMotorPresetId", value)}
+              options={[
+                ["", labels.manualOverride],
+                ...MOTOR_PRESETS.map((preset) => [preset.id, `${preset.name} (${preset.frameSize}, ${preset.stepAngleDeg} deg)`] as [string, string]),
+              ]}
+            />
             <Field label={labels.secondMotorAngle} placeholder="0.9" value={axis.secondMotorAngle} description={desc("secondMotorAngle")} onInfo={onInfo} onChange={(value) => onChange(axisKey, "secondMotorAngle", value)} />
             <Field label={labels.secondPulleyTeeth} step="1" placeholder="20" value={axis.secondPulleyTeeth} description={desc("secondPulleyTeeth")} onInfo={onInfo} onChange={(value) => onChange(axisKey, "secondPulleyTeeth", value)} />
             <Field label={labels.secondMicrostepping} step="1" placeholder="16" value={axis.secondMicrostepping} description={desc("secondMicrostepping")} onInfo={onInfo} onChange={(value) => onChange(axisKey, "secondMicrostepping", value)} />
@@ -302,11 +335,41 @@ export function AxisCalculator() {
   const { lang, theme, unitSystem } = useAppSettings();
   const labels = useMemo(() => getLocale(lang).axis, [lang]);
   const [values, setValues] = useState<AxisInputs>({ ...axisDefaultValues, language: lang, theme, unitSystem });
+  const [storageReady, setStorageReady] = useState(false);
   const [result, setResult] = useState<AxisResult | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [graphOpen, setGraphOpen] = useState(false);
+  const [graphModal, setGraphModal] = useState<AxisGraphModal>(null);
   const [infoModal, setInfoModal] = useState<InfoModal>(null);
   const unit = lengthUnit(unitSystem);
+
+  useEffect(() => {
+    try {
+      const stored = window.localStorage.getItem(AXIS_STORAGE_KEY);
+      if (stored) {
+        const parsed = JSON.parse(stored) as Partial<AxisInputs>;
+        setValues((current) => ({
+          ...current,
+          ...parsed,
+          language: lang,
+          theme,
+          unitSystem,
+          axes: {
+            x: { ...current.axes.x, ...parsed.axes?.x },
+            y: { ...current.axes.y, ...parsed.axes?.y },
+          },
+        }));
+      }
+    } catch {
+      window.localStorage.removeItem(AXIS_STORAGE_KEY);
+    } finally {
+      setStorageReady(true);
+    }
+  }, [lang, theme, unitSystem]);
+
+  useEffect(() => {
+    if (!storageReady) return;
+    window.localStorage.setItem(AXIS_STORAGE_KEY, JSON.stringify(values));
+  }, [storageReady, values]);
 
   useEffect(() => {
     setValues((current) => ({ ...current, language: lang, theme, unitSystem }));
@@ -330,6 +393,7 @@ export function AxisCalculator() {
 
   function updateAxis(axisKey: AxisKey, field: keyof AxisMechanics, value: string) {
     const preset = field === "motorPresetId" ? getMotorPreset(value) : null;
+    const secondPreset = field === "secondMotorPresetId" ? getMotorPreset(value) : null;
     setValues((current) => ({
       ...current,
       axes: {
@@ -337,7 +401,8 @@ export function AxisCalculator() {
         [axisKey]: {
           ...current.axes[axisKey],
           [field]: value,
-          ...(preset ? { motorAngle: preset.stepAngleDeg } : {}),
+          ...(preset ? { motorAngle: preset.stepAngleDeg, secondMotorPresetId: value, secondMotorAngle: preset.stepAngleDeg } : {}),
+          ...(secondPreset ? { secondMotorAngle: secondPreset.stepAngleDeg } : {}),
         },
       },
     }));
@@ -354,7 +419,7 @@ export function AxisCalculator() {
       return {
         ...current,
         lineInterval: value,
-        dpi: interval ? rounded(25.4 / interval, 4) : current.dpi,
+        dpi: interval ? rounded(25.4 / interval, 1) : current.dpi,
       };
     });
   }
@@ -365,7 +430,7 @@ export function AxisCalculator() {
       return {
         ...current,
         dpi: value,
-        lineInterval: dpi ? rounded(25.4 / dpi, 8) : current.lineInterval,
+        lineInterval: dpi ? rounded(25.4 / dpi, 4) : current.lineInterval,
       };
     });
   }
@@ -383,11 +448,7 @@ export function AxisCalculator() {
       <header className="topbar">
         <div className="brand">
           <div className="brand-mark" aria-hidden="true">
-            <svg viewBox="0 0 64 64">
-              <path d="M12 18h40M12 32h40M12 46h40" fill="none" stroke="#ff6b6f" strokeWidth="4" strokeLinecap="round" />
-              <path d="M22 10v44M42 10v44" fill="none" stroke="#66a3ff" strokeWidth="3" strokeLinecap="round" />
-              <circle cx="32" cy="32" r="5" fill="#ffffff" />
-            </svg>
+            <AxisIcon />
           </div>
           <div>
             <h1>{labels.title}</h1>
@@ -412,8 +473,8 @@ export function AxisCalculator() {
           </div>
           <span className="field-hint">{labels.scanModeDescription}</span>
         </div>
-        <Field label={labelWithUnit(labels.lineInterval, unit)} value={displayLengthValue(values.lineInterval, unitSystem, 6)} placeholder={unitSystem === "imperial" ? "0.0024 in" : "0.06 mm"} description={labels.lineIntervalDescription} onInfo={setInfoModal} onChange={updateLineInterval} />
-        <Field label={labels.dpi} value={values.dpi ?? ""} step="0.01" placeholder="423.33 DPI" description={labels.dpiDescription} onInfo={setInfoModal} onChange={updateDpi} />
+        <Field label={labelWithUnit(labels.lineInterval, unit)} value={displayLengthValue(values.lineInterval, unitSystem, 4)} placeholder={unitSystem === "imperial" ? "0.0024 in" : "0.0600 mm"} description={labels.lineIntervalDescription} onInfo={setInfoModal} onChange={updateLineInterval} />
+        <Field label={labels.dpi} value={displayDpiValue(values.dpi)} step="0.1" placeholder="423.3 DPI" description={labels.dpiDescription} onInfo={setInfoModal} onChange={updateDpi} />
         <Field label={labelWithUnit(labels.spotDiameter, unit)} value={displayLengthValue(values.spotDiameter, unitSystem, 6)} placeholder={unitSystem === "imperial" ? "0.0047 in" : "0.12 mm"} description={labels.spotDiameterDescription} onInfo={setInfoModal} onChange={updateSpotDiameter} />
         <div className="stack">
           <button className="button" type="button" onClick={() => void runCalculation()}>{labels.calculate}</button>
@@ -448,7 +509,7 @@ export function AxisCalculator() {
               <MetricCard
                 label={labels.intervalInMicrosteps}
                 value={interval ? format(interval.intervalMicrosteps, 4) : labels.notAvailable}
-                sub={interval ? `${labels.nearestCleanInterval}: ${formatLength(interval.nearestCleanInterval, unitSystem, 6)} | ${format(interval.nearestCleanDpi, 1)} DPI` : "-"}
+                sub={interval ? `${labels.nearestCleanInterval}: ${formatLength(interval.nearestCleanInterval, unitSystem, 4)} | ${format(interval.nearestCleanDpi, 1)} DPI` : "-"}
               />
             </div>
 
@@ -499,8 +560,8 @@ export function AxisCalculator() {
                       return (
                         <tr key={microsteps}>
                           <td>{microsteps}</td>
-                          <td>{formatLength(cleanInterval, unitSystem, 6)}</td>
-                          <td>{format(dpi, 2)}</td>
+                          <td>{formatLength(cleanInterval, unitSystem, 4)}</td>
+                          <td>{format(dpi, 1)}</td>
                         </tr>
                       );
                     }) : null}
@@ -520,8 +581,8 @@ export function AxisCalculator() {
         <aside className="panel visual-panel">
           {result ? (
             <>
-              <AxisIntervalGraph result={result} labels={labels} unitSystem={unitSystem} onExpand={() => setGraphOpen(true)} />
-              <EngravingLineGraph result={result} labels={labels} unitSystem={unitSystem} />
+              <AxisIntervalGraph result={result} labels={labels} unitSystem={unitSystem} onExpand={() => setGraphModal("interval")} />
+              <EngravingLineGraph result={result} labels={labels} unitSystem={unitSystem} onExpand={() => setGraphModal("engraving")} />
             </>
           ) : null}
         </aside>
@@ -534,14 +595,18 @@ export function AxisCalculator() {
               <h2>{infoModal.title}</h2>
               <button className="button secondary modal-close" type="button" onClick={() => setInfoModal(null)} aria-label={labels.close}>x</button>
             </div>
-            <p className="modal-body-text">{infoModal.body}</p>
+            {infoModal.content ? infoModal.content : <p className="modal-body-text">{infoModal.body}</p>}
           </div>
         </div>
       ) : null}
 
-      {graphOpen && result ? (
-        <GraphModal title={labels.intervalGraphTitle} closeLabel={labels.close} onClose={() => setGraphOpen(false)}>
-          <AxisIntervalGraph result={result} labels={labels} unitSystem={unitSystem} expanded />
+      {graphModal && result ? (
+        <GraphModal title={graphModal === "interval" ? labels.intervalGraphTitle : labels.engravingLineGraphTitle} closeLabel={labels.close} onClose={() => setGraphModal(null)}>
+          {graphModal === "interval" ? (
+            <AxisIntervalGraph result={result} labels={labels} unitSystem={unitSystem} expanded />
+          ) : (
+            <EngravingLineGraph result={result} labels={labels} unitSystem={unitSystem} expanded />
+          )}
         </GraphModal>
       ) : null}
     </main>

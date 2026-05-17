@@ -44,8 +44,13 @@ export function BeamPreview({
   const startX = 46;
   const lensX = 286;
   const endX = 760;
-  const focalScale = (endX - lensX - 100) / 152.4;
-  const focusX = clamp(lensX + result.focalLength * focalScale, lensX + 90, endX - 92);
+  const focalOptions = FOCAL_LENGTHS.map((option) => option.mm);
+  const selectedFocalIndex = focalOptions.reduce((best, option, index) => (
+    Math.abs(option - result.focalLength) < Math.abs(focalOptions[best] - result.focalLength) ? index : best
+  ), 0);
+  const maxPresetFocal = Math.max(...focalOptions);
+  const focalScale = (endX - lensX - 48) / maxPresetFocal;
+  const focusX = clamp(lensX + result.focalLength * focalScale, lensX + 40, endX - 36);
   const incomingHalf = clamp(result.sourceBeam * 5.2, 18, 58);
   const lensHalf = clamp(result.lensDiameter * 2.35, 44, 82);
   const beamAtLensHalf = clamp(result.effectiveBeam * 5.2, 17, lensHalf - 7);
@@ -99,12 +104,12 @@ export function BeamPreview({
           <span>{labels.selectedFocalLength}</span>
           <input
             type="range"
-            min="25.4"
-            max="508"
-            step="0.1"
-            value={result.focalLength}
+            min="0"
+            max={focalOptions.length - 1}
+            step="1"
+            value={selectedFocalIndex}
             aria-label={labels.selectedFocalLength}
-            onChange={(event) => onFocalLengthChange(Number(event.target.value))}
+            onChange={(event) => onFocalLengthChange(focalOptions[Number(event.target.value)] || result.focalLength)}
           />
           <strong>{formatLength(result.focalLength, unitSystem, 2)}</strong>
         </div>
@@ -130,8 +135,6 @@ export function PulseHzGraph({
   onHzChange: (hz: number) => void;
   onExpand?: () => void;
 }) {
-  const [zoom, setZoom] = useState(1);
-  const [pan, setPan] = useState(0);
   const [selectedX, setSelectedX] = useState<number | null>(null);
   const minHz = 1000;
   const maxHz = 100000;
@@ -142,11 +145,11 @@ export function PulseHzGraph({
   const axisW = axisRight - axisLeft;
   const normalizedHz = clamp((hz - minHz) / (maxHz - minHz), 0, 1);
   const barX = axisLeft + normalizedHz * axisW;
-  const cycles = expanded ? 5 * zoom : 3;
+  const cycles = clamp(hz / 12000, expanded ? 1.1 : 0.7, expanded ? 12 : 7);
   const path = Array.from({ length: 90 }, (_, index) => {
     const ratio = index / 89;
     const x = axisLeft + ratio * axisW;
-    const y = height / 2 + Math.sin((ratio * cycles + pan) * Math.PI * 2) * (expanded ? 72 : 38);
+    const y = height / 2 + Math.sin(ratio * cycles * Math.PI * 2) * (expanded ? 72 : 38);
     return `${index === 0 ? "M" : "L"}${x.toFixed(1)} ${y.toFixed(1)}`;
   }).join(" ");
 
@@ -163,6 +166,11 @@ export function PulseHzGraph({
         <span>{labels.pulseGraphTitle}</span>
         <strong>{formatCompact(hz, 0)} Hz</strong>
       </div>
+      {!expanded && onExpand ? (
+        <button type="button" className="graph-plus" aria-label={labels.expandGraphPlus} onClick={onExpand}>
+          +
+        </button>
+      ) : null}
       <svg
         viewBox={`0 0 ${width} ${height}`}
         role="img"
@@ -200,14 +208,19 @@ export function PulseHzGraph({
         <span>{labels.selectedWatt}: <strong>{formatCompact(selectedWatt, 2)} W</strong></span>
       </div>
       {expanded ? (
-        <div className="graph-control-row">
-          <button type="button" className="mini-button" onClick={() => setZoom((value) => clamp(value + 0.25, 0.5, 4))}>{labels.zoomIn}</button>
-          <button type="button" className="mini-button" onClick={() => setZoom((value) => clamp(value - 0.25, 0.5, 4))}>{labels.zoomOut}</button>
-          <button type="button" className="mini-button" onClick={() => setPan((value) => value - 0.12)}>{labels.panLeft}</button>
-          <button type="button" className="mini-button" onClick={() => setPan((value) => value + 0.12)}>{labels.panRight}</button>
+        <div className="graph-slider-row pulse-hz-slider">
+          <span>{labels.hzZoomSlider}</span>
+          <input
+            type="range"
+            min={minHz}
+            max={maxHz}
+            step="100"
+            value={clamp(hz, minHz, maxHz)}
+            aria-label={labels.hzZoomSlider}
+            onChange={(event) => onHzChange(Number(event.target.value))}
+          />
+          <strong>{formatCompact(hz, 0)} Hz</strong>
         </div>
-      ) : onExpand ? (
-        <button type="button" className="preview-open" onClick={onExpand}>{labels.expandGraph}</button>
       ) : null}
     </div>
   );
@@ -228,25 +241,33 @@ export function LensShapePreview({ shape, labels }: { shape: string; labels: Rec
   );
 }
 
-export function MirrorFinishPreview({ label, reflectivity, labels }: { label: string; reflectivity: number; labels: Record<string, string> }) {
+export function MirrorFinishPreview({ finishKey, label, reflectivity, labels }: { finishKey: string; label: string; reflectivity: number; labels: Record<string, string> }) {
+  const palette: Record<string, { core: string; edge: string; shine: string }> = {
+    enhancedCopper: { core: "#b96830", edge: "#5f2f1f", shine: "#ffd09a" },
+    protectedGold: { core: "#d4a21f", edge: "#76530d", shine: "#fff0a5" },
+    molybdenum: { core: "#9aa1a9", edge: "#3f4650", shine: "#eef2f6" },
+    standardSi: { core: "#7f91b8", edge: "#394764", shine: "#dce8ff" },
+  };
+  const colors = palette[finishKey] || palette.standardSi;
+  const gradientId = `mirror-disk-${finishKey.replace(/[^a-z0-9]/gi, "-")}`;
   return (
     <div className="technical-preview optic-preview" aria-label={labels.mirrorPreviewTitle}>
       <div className="preview-head"><span>{labels.mirrorPreviewTitle}</span><strong>{formatCompact(reflectivity * 100, 2)}%</strong></div>
       <svg viewBox="0 0 220 130" role="img">
         <defs>
-          <linearGradient id="mirror-sheen" x1="0" x2="1">
-            <stop offset="0" stopColor="var(--panel-solid)" />
-            <stop offset="0.48" stopColor="var(--primary)" stopOpacity="0.42" />
-            <stop offset="1" stopColor="var(--amber)" stopOpacity="0.62" />
-          </linearGradient>
+          <radialGradient id={gradientId} cx="38%" cy="30%" r="62%">
+            <stop offset="0" stopColor={colors.shine} />
+            <stop offset="0.42" stopColor={colors.core} />
+            <stop offset="1" stopColor={colors.edge} />
+          </radialGradient>
         </defs>
         <rect width="220" height="130" fill="transparent" />
-        <g transform="translate(80 24) rotate(-35 34 42)">
-          <rect x="0" y="0" width="68" height="84" rx="8" fill="url(#mirror-sheen)" stroke="var(--line)" strokeWidth="2" />
-          <line x1="13" x2="55" y1="18" y2="18" stroke="var(--panel-solid)" opacity="0.55" />
-          <line x1="13" x2="55" y1="34" y2="34" stroke="var(--panel-solid)" opacity="0.35" />
+        <g transform="translate(0 2)">
+          <circle cx="110" cy="58" r="43" fill={`url(#${gradientId})`} stroke="var(--line)" strokeWidth="3" />
+          <circle cx="110" cy="58" r="31" fill="none" stroke="rgba(255,255,255,.5)" strokeWidth="1.4" />
+          <ellipse cx="94" cy="40" rx="20" ry="8" fill="rgba(255,255,255,.42)" transform="rotate(-18 94 40)" />
         </g>
-        <path d="M24 94 L97 72 L196 34" fill="none" stroke="var(--beam)" strokeWidth="2" />
+        <path d="M28 58 H70 M150 58 H194" fill="none" stroke="var(--beam)" strokeWidth="2" strokeLinecap="round" />
         <text x="110" y="116" fill="var(--muted)" fontSize="11" textAnchor="middle">{label}</text>
       </svg>
     </div>
@@ -278,11 +299,21 @@ export function OpticalPathGraph({ result, labels, unitSystem, onExpand, expande
   const [selectedId, setSelectedId] = useState(result.opticalStages[0]?.id || "source");
   const open = onExpand ? () => onExpand("optical") : undefined;
   const selected = result.opticalStages.find((stage) => stage.id === selectedId) || result.opticalStages[0];
-  const points = result.opticalStages.map((stage, index) => {
-    const x = 58 + index * (684 / Math.max(result.opticalStages.length - 1, 1));
-    const y = index < 4 ? 82 : 158;
-    return { stage, x, y };
-  });
+  function pointFor(stageId: string) {
+    if (stageId === "source") return { x: 704, y: 82 };
+    if (stageId === "combiner") {
+      if (result.beamCombinerPosition === "nearSource") return { x: 618, y: 82 };
+      if (result.beamCombinerPosition === "beforeFirstMirror") return { x: 378, y: 82 };
+      return { x: 160, y: 64 };
+    }
+    if (stageId === "mirror-1") return { x: 126, y: 82 };
+    if (stageId === "mirror-2") return { x: 126, y: 205 };
+    if (stageId === "mirror-3") return { x: 590, y: 205 };
+    if (stageId === "lens") return { x: 590, y: 254 };
+    if (stageId === "surface") return { x: 590, y: 292 };
+    return { x: 590, y: 205 };
+  }
+  const points = result.opticalStages.map((stage) => ({ stage, ...pointFor(stage.id) }));
   return (
     <div className={`graph-panel optical-path-panel ${expanded ? "expanded" : ""}`}>
       <div className="graph-head">
@@ -293,6 +324,12 @@ export function OpticalPathGraph({ result, labels, unitSystem, onExpand, expande
       </div>
       <svg className="graph optical-path-graph" viewBox="0 0 820 320" role="img" aria-label={labels.fullOpticalPathTitle} onClick={open}>
         <rect width="820" height="320" fill="transparent" />
+        <g opacity="0.72">
+          <rect x="408" y="56" width="330" height="34" rx="17" fill="none" stroke="var(--axis)" strokeWidth="1.4" />
+          <rect x="730" y="62" width="34" height="22" rx="4" fill="none" stroke="var(--axis)" strokeWidth="1.2" />
+          <path d="M438 82h264" fill="none" stroke="var(--axis)" strokeWidth="1" strokeDasharray="6 7" />
+          <path d="M520 58c18 18 18 44 0 62" fill="none" stroke="var(--axis)" strokeWidth="1" />
+        </g>
         <polyline points={points.map((point) => `${point.x},${point.y}`).join(" ")} fill="none" stroke="var(--beam)" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
         {points.map(({ stage, x, y }) => (
           <g key={stage.id} role="button" tabIndex={0} onClick={(event) => {
@@ -301,11 +338,18 @@ export function OpticalPathGraph({ result, labels, unitSystem, onExpand, expande
           }} onKeyDown={(event) => {
             if (event.key === "Enter" || event.key === " ") setSelectedId(stage.id);
           }}>
-            <circle cx={x} cy={y} r={selectedId === stage.id ? 22 : 17} fill={stage.warning ? "var(--amber)" : stage.kind === "surface" ? "var(--green)" : "var(--panel-solid)"} stroke={stage.kind === "source" ? "var(--beam)" : "var(--primary)"} strokeWidth="3">
+            {stage.kind === "mirror" ? (
+              <rect x={x - 14} y={y - 14} width="28" height="28" rx="4" transform={`rotate(-38 ${x} ${y})`} fill={stage.warning ? "var(--amber)" : "var(--panel-solid)"} stroke="var(--primary)" strokeWidth="3" />
+            ) : (
+              <circle cx={x} cy={y} r={selectedId === stage.id ? 22 : 17} fill={stage.warning ? "var(--amber)" : stage.kind === "surface" ? "var(--green)" : "var(--panel-solid)"} stroke={stage.kind === "source" ? "var(--beam)" : "var(--primary)"} strokeWidth="3" />
+            )}
+            <circle cx={x} cy={y} r={stage.kind === "mirror" ? 17 : 1} fill="transparent">
               <title>{labels[stage.labelKey]} · {labels.energyAfterStage}: {formatCompact(stage.energyWatt, 2)} W</title>
             </circle>
-            <text x={x} y={y + 44} fill="var(--ink)" fontSize="11" fontWeight="900" textAnchor="middle">{labels[stage.labelKey]}</text>
-            <text x={x} y={y + 60} fill="var(--muted)" fontSize="10" textAnchor="middle">{formatCompact(stage.energyPercent, 1)}%</text>
+            <text x={x} y={stage.kind === "surface" ? y - 28 : y + 44} fill="var(--ink)" fontSize="11" fontWeight="900" textAnchor="middle">{labels[stage.labelKey]}</text>
+            <text x={x} y={stage.kind === "surface" ? y - 13 : y + 60} fill="var(--muted)" fontSize="10" textAnchor="middle">
+              {formatCompact(stage.energyPercent, 1)}% · {formatLength(stage.beamMm, unitSystem, stage.kind === "surface" ? 4 : 2)}
+            </text>
           </g>
         ))}
       </svg>
@@ -521,17 +565,22 @@ export function FocalGraph({ values, labels, unitSystem }: GraphProps) {
           const selectedSeries = Math.abs(item.diameter - selectedLensDiameter) < 0.02;
           return item.points.map((point, index) => {
             const selected = selectedSeries && Math.abs(point.focal - selectedFocal) < 0.02;
+            const x = xScaleForFocal(index);
+            const y = yScale(toDisplayLength(point.spot));
             return (
-              <circle
-                key={`${item.diameter}-${point.focal}`}
-                cx={xScaleForFocal(index)}
-                cy={yScale(toDisplayLength(point.spot))}
-                r={selected ? 6 : selectedSeries ? 4 : 3}
-                fill={selected ? "var(--beam)" : item.color}
-                opacity={selectedSeries ? 1 : 0.58}
-              >
-                <title>{item.label} / {point.label}: {formatLength(point.spot, unitSystem, 5)}</title>
-              </circle>
+              <g key={`${item.diameter}-${point.focal}`} opacity={selectedSeries ? 1 : 0.64}>
+                <circle
+                  cx={x}
+                  cy={y}
+                  r={selected ? 6 : selectedSeries ? 4 : 3}
+                  fill={selected ? "var(--beam)" : item.color}
+                >
+                  <title>{item.label} / {point.label}: {formatLength(point.spot, unitSystem, 5)}</title>
+                </circle>
+                <text x={x + 7} y={y - 4} fill={selected ? "var(--ink)" : item.color} fontSize="7.2" fontWeight={selected ? 900 : 700}>
+                  {formatNumber(toDisplayLength(point.spot), 4)}
+                </text>
+              </g>
             );
           });
         })}
