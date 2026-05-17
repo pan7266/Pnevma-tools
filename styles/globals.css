@@ -358,7 +358,7 @@ h3 {
 
 .axis-layout {
   display: grid;
-  grid-template-columns: minmax(340px, 0.82fr) minmax(520px, 1.35fr) minmax(320px, 0.9fr);
+  grid-template-columns: minmax(340px, 0.85fr) minmax(520px, 1.35fr);
   gap: 18px;
   align-items: start;
 }
@@ -1013,7 +1013,7 @@ details.graph-collapsible > summary::after {
   position: sticky;
   top: 66px;
   z-index: 31;
-  grid-template-columns: minmax(260px, 1.22fr) minmax(150px, 0.72fr) minmax(120px, 0.5fr) minmax(150px, 0.72fr) minmax(138px, 0.55fr);
+  grid-template-columns: minmax(260px, 1.15fr) minmax(150px, 0.72fr) minmax(120px, 0.5fr) minmax(150px, 0.72fr);
   align-items: stretch;
   background: var(--panel-solid);
 }
@@ -1048,9 +1048,10 @@ details.graph-collapsible > summary::after {
 
 .spot-measurement-row {
   display: grid;
-  grid-template-columns: minmax(112px, 0.45fr) minmax(112px, 0.45fr) minmax(260px, 1.15fr) minmax(112px, 0.45fr) minmax(120px, 0.45fr) minmax(220px, 0.85fr);
+  grid-template-columns: repeat(2, minmax(112px, 0.45fr));
   gap: 12px;
   align-items: start;
+  max-width: 380px;
 }
 
 .source-with-action {
@@ -1071,6 +1072,10 @@ details.graph-collapsible > summary::after {
 
 .pulse-stack .pulse-preview {
   min-height: 128px;
+}
+
+.spot-left-measurement .pulse-preview {
+  min-height: 142px;
 }
 
 .invalid-field input,
@@ -1182,13 +1187,14 @@ details.graph-collapsible > summary::after {
 }
 
 .motor-preset-row {
-  align-items: stretch;
+  align-items: start;
   grid-template-columns: minmax(0, 1fr) minmax(130px, auto);
 }
 
 .motor-preset-row .mini-button {
-  align-self: center;
+  align-self: start;
   margin-top: 30px;
+  min-height: 42px;
 }
 
 .belt-preset-field {
@@ -1432,14 +1438,24 @@ th {
     grid-template-columns: 280px minmax(0, 1fr);
   }
 
-  .layout,
-  .axis-layout {
+  .layout {
     grid-template-columns: 1fr;
   }
 
   .side-notes,
   .visual-panel,
-  .spot-tool .layout > aside.panel:first-child,
+  .spot-tool .layout > aside.panel:first-child {
+    position: static;
+    max-height: none;
+    overflow: visible;
+  }
+}
+
+@media (max-width: 1180px) {
+  .axis-layout {
+    grid-template-columns: 1fr;
+  }
+
   .axis-grid {
     position: static;
     max-height: none;
@@ -1549,6 +1565,10 @@ th {
   .wizard-steps,
   .optic-split {
     grid-template-columns: 1fr;
+  }
+
+  .spot-measurement-row {
+    max-width: none;
   }
 
   .toolbar-actions {

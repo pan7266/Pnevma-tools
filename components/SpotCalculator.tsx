@@ -230,6 +230,14 @@ export function SpotCalculator() {
     setValues((current) => ({ ...current, [name]: value }));
   }
 
+  function updateLensFinish(finish: string) {
+    setValues((current) => ({
+      ...current,
+      finish,
+      cvdMaker: finish === "CVD" ? current.cvdMaker : "generic",
+    }));
+  }
+
   function updateFamily(family: string) {
     setValues((current) => {
       const nextSources = getFilteredSources(family);
@@ -257,7 +265,7 @@ export function SpotCalculator() {
     const normalized = text.trim().toLowerCase();
     const match = filteredSources.find((source) => {
       const label = sourceOptionLabel(source).toLowerCase();
-      return label === normalized || `${source.brand} ${source.model}`.toLowerCase() === normalized || source.id.toLowerCase() === normalized;
+      return label === normalized || label.includes(normalized) || `${source.brand} ${source.model}`.toLowerCase() === normalized || source.id.toLowerCase() === normalized;
     });
     updateSource(match?.id || "");
   }
@@ -316,7 +324,7 @@ export function SpotCalculator() {
     if (graphModal === "path") return <PowerPathGraph result={result} labels={labels} expanded />;
     if (graphModal === "beam") return <BeamPreview result={result} labels={labels} unitSystem={unitSystem} expanded onFocalLengthChange={(value) => updateField("focalLength", value)} />;
     if (graphModal === "finish") return <FinishGraph values={values} result={result} labels={labels} lang={lang} unitSystem={unitSystem} />;
-    if (graphModal === "focal") return <FocalGraph values={values} result={result} labels={labels} lang={lang} unitSystem={unitSystem} />;
+    if (graphModal === "focal") return <FocalGraph values={values} result={result} labels={labels} lang={lang} unitSystem={unitSystem} expanded />;
     if (graphModal === "source") return <BeamLibraryGraph values={values} result={result} labels={labels} lang={lang} unitSystem={unitSystem} />;
     if (graphModal === "expander") return <ExpanderGraph result={result} labels={labels} unitSystem={unitSystem} />;
     if (graphModal === "optical") return <OpticalPathGraph result={result} labels={labels} unitSystem={unitSystem} expanded />;
@@ -415,49 +423,6 @@ export function SpotCalculator() {
               <FieldLabel infoKey="peakWatt" labels={labels} info={info} onOpen={setModal}>{labels.peakWatt}</FieldLabel>
               <input type="number" min="0" step="0.1" placeholder={inputPlaceholder("150 W")} value={String(values.peakWatt ?? "")} onChange={(event) => updateField("peakWatt", event.target.value)} />
             </label>
-            <label className={`power-header-field ${fieldInvalid("powerPercent") || ""}`}>
-              <FieldLabel infoKey="powerPercent" labels={labels} info={info} onOpen={setModal}>{labels.powerPercent}</FieldLabel>
-              <div className="power-slider-card">
-                <div className="power-slider-top">
-                  <span>{labels.selectedPower}</span>
-                  <strong>{values.powerPercent}{labels.percentUnit}</strong>
-                </div>
-                <div className="range-wrap premium-range">
-                  <input type="range" min="0" max="100" step="1" value={Number(values.powerPercent)} onChange={(event) => updateField("powerPercent", Number(event.target.value))} />
-                  <input type="number" min="0" max="100" step="1" placeholder={inputPlaceholder("65%")} value={String(values.powerPercent)} onChange={(event) => updateField("powerPercent", event.target.value)} />
-                </div>
-                <div className="power-slider-scale">
-                  <span>{labels.minPower} 0%</span>
-                  <span>{labels.warningZone} 90-100%</span>
-                  <span>{labels.maxPower} 100%</span>
-                </div>
-              </div>
-            </label>
-            <label className={fieldInvalid("ampValue")}>
-              <FieldLabel infoKey="ampValue" labels={labels} info={info} onOpen={setModal}>{labels.ampValue}</FieldLabel>
-              <input type="number" min="0" step="0.1" placeholder={inputPlaceholder("30 mA")} value={String(values.ampValue ?? "")} onChange={(event) => updateField("ampValue", event.target.value)} />
-            </label>
-            <label>
-              <FieldLabel infoKey="ampMeterType" labels={labels} info={info} onOpen={setModal}>{labels.ampMeterType}</FieldLabel>
-              <select value={values.ampMeterType} onChange={(event) => updateField("ampMeterType", event.target.value)}>
-                <option value="digital">{labels.digital}</option>
-                <option value="analog">{labels.analog}</option>
-              </select>
-            </label>
-            <div className={`pulse-stack ${fieldInvalid("hz") || ""}`}>
-              <label className={fieldInvalid("hz")}>
-                <FieldLabel infoKey="pulseHz" labels={labels} info={info} onOpen={setModal}>{labels.pulseHz}</FieldLabel>
-                <input type="number" min="1" step="100" placeholder={inputPlaceholder("20000 Hz")} value={String(values.hz)} onChange={(event) => updateField("hz", event.target.value)} />
-              </label>
-              <PulseHzGraph
-                hz={Number(values.hz) || 1}
-                selectedWatt={result?.selectedWatt || estimatedSelectedWatt}
-                pulseEnergyMj={result?.pulseEnergyMj || previewPulseEnergy}
-                labels={labels}
-                onHzChange={(hz) => updateField("hz", hz)}
-                onExpand={() => setGraphModal("pulse")}
-              />
-            </div>
           </div>
         </div>
       </section>
@@ -465,6 +430,56 @@ export function SpotCalculator() {
       <section className="layout">
         <aside className="panel panel-pad stack">
           {error ? <div className="error">{error}</div> : null}
+
+          <CollapsibleSection title={labels.lampCalibration}>
+            <div className="spot-left-measurement stack">
+              <label className={`power-header-field ${fieldInvalid("powerPercent") || ""}`}>
+                <FieldLabel infoKey="powerPercent" labels={labels} info={info} onOpen={setModal}>{labels.powerPercent}</FieldLabel>
+                <div className="power-slider-card">
+                  <div className="power-slider-top">
+                    <span>{labels.selectedPower}</span>
+                    <strong>{values.powerPercent}{labels.percentUnit}</strong>
+                  </div>
+                  <div className="range-wrap premium-range">
+                    <input type="range" min="0" max="100" step="1" value={Number(values.powerPercent)} onChange={(event) => updateField("powerPercent", Number(event.target.value))} />
+                    <input type="number" min="0" max="100" step="1" placeholder={inputPlaceholder("65%")} value={String(values.powerPercent)} onChange={(event) => updateField("powerPercent", event.target.value)} />
+                  </div>
+                  <div className="power-slider-scale">
+                    <span>{labels.minPower} 0%</span>
+                    <span>{labels.warningZone} 90-100%</span>
+                    <span>{labels.maxPower} 100%</span>
+                  </div>
+                </div>
+              </label>
+              <div className="field-row compact-row">
+                <label className={fieldInvalid("ampValue")}>
+                  <FieldLabel infoKey="ampValue" labels={labels} info={info} onOpen={setModal}>{labels.ampValue}</FieldLabel>
+                  <input type="number" min="0" step="0.1" placeholder={inputPlaceholder("30 mA")} value={String(values.ampValue ?? "")} onChange={(event) => updateField("ampValue", event.target.value)} />
+                </label>
+                <label>
+                  <FieldLabel infoKey="ampMeterType" labels={labels} info={info} onOpen={setModal}>{labels.ampMeterType}</FieldLabel>
+                  <select value={values.ampMeterType} onChange={(event) => updateField("ampMeterType", event.target.value)}>
+                    <option value="digital">{labels.digital}</option>
+                    <option value="analog">{labels.analog}</option>
+                  </select>
+                </label>
+              </div>
+              <div className={`pulse-stack ${fieldInvalid("hz") || ""}`}>
+                <label className={fieldInvalid("hz")}>
+                  <FieldLabel infoKey="pulseHz" labels={labels} info={info} onOpen={setModal}>{labels.pulseHz}</FieldLabel>
+                  <input type="number" min="1" step="100" placeholder={inputPlaceholder("20000 Hz")} value={String(values.hz)} onChange={(event) => updateField("hz", event.target.value)} />
+                </label>
+                <PulseHzGraph
+                  hz={Number(values.hz) || 1}
+                  selectedWatt={result?.selectedWatt || estimatedSelectedWatt}
+                  pulseEnergyMj={result?.pulseEnergyMj || previewPulseEnergy}
+                  labels={labels}
+                  onHzChange={(hz) => updateField("hz", hz)}
+                  onExpand={() => setGraphModal("pulse")}
+                />
+              </div>
+            </div>
+          </CollapsibleSection>
 
           <CollapsibleSection title={labels.lens}>
             <div className="field-row compact-row">
@@ -500,14 +515,16 @@ export function SpotCalculator() {
               <div className="optic-column">
                 <label>
                   <FieldLabel infoKey="lensFinish" labels={labels} info={info} onOpen={setModal}>{labels.lensFinish}</FieldLabel>
-                  <select value={values.finish} onChange={(event) => updateField("finish", event.target.value)}>
+                  <select value={values.finish} onChange={(event) => updateLensFinish(event.target.value)}>
                     {Object.keys(FINISHES).map((finish) => <option key={finish} value={finish}>{finish}</option>)}
                   </select>
                 </label>
-                <label className="check-label lens-finish-check">
-                  <input type="checkbox" checked={values.cvdMaker === "iivi"} onChange={(event) => updateField("cvdMaker", event.target.checked ? "iivi" : "generic")} />
-                  <FieldLabel infoKey="cvdMaker" labels={labels} info={info} onOpen={setModal}>{labels.iiViCvd}</FieldLabel>
-                </label>
+                {values.finish === "CVD" ? (
+                  <label className="check-label lens-finish-check">
+                    <input type="checkbox" checked={values.cvdMaker === "iivi"} onChange={(event) => updateField("cvdMaker", event.target.checked ? "iivi" : "generic")} />
+                    <FieldLabel infoKey="cvdMaker" labels={labels} info={info} onOpen={setModal}>{labels.iiViCvd}</FieldLabel>
+                  </label>
+                ) : null}
               </div>
             </div>
           </CollapsibleSection>

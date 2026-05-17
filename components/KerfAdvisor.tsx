@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useAppSettings } from "@/components/AppSettings";
 import { KerfIcon } from "@/components/ToolIcons";
+import { InfoButton } from "@/components/ui/InfoButton";
 import { MetricCard } from "@/components/ui/MetricCard";
 import { calculateKerfAdvisor } from "@/lib/calculators/kerf";
 import {
@@ -33,6 +34,34 @@ function clamp(value: number, min: number, max: number): number {
 function numberOrUndefined(value: string): number | undefined {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : undefined;
+}
+
+function thicknessStepFor(value: number): number {
+  return value < 1 ? 0.1 : 0.5;
+}
+
+function roundThickness(value: number): number {
+  if (!Number.isFinite(value)) return 1;
+  const safe = Math.max(value, 0.01);
+  const step = thicknessStepFor(safe);
+  return Number((Math.round(safe / step) * step).toFixed(2));
+}
+
+function InfoLabel({
+  label,
+  body,
+  onOpen,
+}: {
+  label: string;
+  body: string;
+  onOpen: (modal: { title: string; body: string }) => void;
+}) {
+  return (
+    <span className="label-line">
+      {label}
+      <InfoButton title={label} body={body} onOpen={onOpen} />
+    </span>
+  );
 }
 
 function loadJsonArray<T>(key: string): T[] {
@@ -110,6 +139,7 @@ export function KerfAdvisor() {
   const [measuredWidth, setMeasuredWidth] = useState("");
   const [cutLines, setCutLines] = useState("");
   const [jsonData, setJsonData] = useState("");
+  const [infoModal, setInfoModal] = useState<{ title: string; body: string } | null>(null);
 
   useEffect(() => {
     const savedProfiles = loadJsonArray<OpticalProfile>(KERF_STORAGE_KEYS.opticalProfiles);
@@ -142,6 +172,8 @@ export function KerfAdvisor() {
   };
   const result = useMemo(() => calculateKerfAdvisor(inputs), [inputs]);
   const steps = [labels.stepOptical, labels.stepMaterial, labels.stepOperation, labels.stepResult, labels.stepCalibration, labels.stepExport];
+  const thicknessStep = thicknessStepFor(thicknessMm);
+  const help = (key: string, fallback: string) => labels[key] || fallback;
 
   function chooseMaterial(nextId: string) {
     const material = KERF_MATERIALS.find((item) => item.id === nextId) || KERF_MATERIALS[0];
@@ -220,7 +252,7 @@ export function KerfAdvisor() {
               <section className="mini-panel">
                 <h2>{labels.opticalProfile}</h2>
                 <label>
-                  <span className="label-line">{labels.opticalProfile}</span>
+                  <InfoLabel label={labels.opticalProfile} body={help("helpOpticalProfile", labels.importProfile)} onOpen={setInfoModal} />
                   <select value={selectedProfileId} onChange={(event) => setSelectedProfileId(event.target.value)}>
                     {profiles.map((profile) => <option key={profile.id} value={profile.id}>{profile.profileName}</option>)}
                   </select>
@@ -236,13 +268,13 @@ export function KerfAdvisor() {
               <section className="mini-panel">
                 <h2>{labels.materialPreset}</h2>
                 <label>
-                  <span className="label-line">{labels.materialPreset}</span>
+                  <InfoLabel label={labels.materialPreset} body={help("helpMaterialPreset", labels.opticalIndicatorNotice)} onOpen={setInfoModal} />
                   <select value={materialId} onChange={(event) => chooseMaterial(event.target.value)}>
                     {KERF_MATERIALS.map((material) => <option key={material.id} value={material.id}>{labels[material.labelKey]}</option>)}
                   </select>
                 </label>
                 <label>
-                  <span className="label-line">{labels.subtype}</span>
+                  <InfoLabel label={labels.subtype} body={help("helpSubtype", labels.opticalIndicatorNotice)} onOpen={setInfoModal} />
                   <select value={subtype} onChange={(event) => {
                     const next = event.target.value as KerfMaterialFamily;
                     setSubtype(next);
@@ -252,8 +284,8 @@ export function KerfAdvisor() {
                   </select>
                 </label>
                 <label>
-                  <span className="label-line">{labels.thickness} (mm)</span>
-                  <input type="number" min="0.01" step="0.1" value={thicknessMm} onChange={(event) => setThicknessMm(Number(event.target.value))} />
+                  <InfoLabel label={`${labels.thickness} (mm)`} body={help("helpThickness", labels.opticalIndicatorNotice)} onOpen={setInfoModal} />
+                  <input type="number" min="0.01" step={thicknessStep} value={thicknessMm} onChange={(event) => setThicknessMm(Number(event.target.value))} onBlur={() => setThicknessMm((current) => roundThickness(current))} />
                 </label>
               </section>
             ) : null}
@@ -262,26 +294,26 @@ export function KerfAdvisor() {
               <section className="mini-panel">
                 <h2>{labels.operation}</h2>
                 <label>
-                  <span className="label-line">{labels.operation}</span>
+                  <InfoLabel label={labels.operation} body={help("helpOperation", labels.opticalIndicatorNotice)} onOpen={setInfoModal} />
                   <select value={operation} onChange={(event) => setOperation(event.target.value as KerfOperation)}>
                     {KERF_OPERATIONS.map((item) => <option key={item} value={item}>{labels[item]}</option>)}
                   </select>
                 </label>
                 <label>
-                  <span className="label-line">{labels.qualityGoal}</span>
+                  <InfoLabel label={labels.qualityGoal} body={help("helpQualityGoal", labels.opticalIndicatorNotice)} onOpen={setInfoModal} />
                   <select value={qualityGoal} onChange={(event) => setQualityGoal(event.target.value as KerfQualityGoal)}>
                     {KERF_QUALITY_GOALS.map((item) => <option key={item} value={item}>{labels[item]}</option>)}
                   </select>
                 </label>
                 <div className="field-row compact-row">
                   <label>
-                    <span className="label-line">{labels.airAssist}</span>
+                    <InfoLabel label={labels.airAssist} body={help("helpAirAssist", labels.opticalIndicatorNotice)} onOpen={setInfoModal} />
                     <select value={airAssist} onChange={(event) => setAirAssist(event.target.value as "off" | "low" | "medium" | "high")}>
                       {["off", "low", "medium", "high"].map((item) => <option key={item} value={item}>{labels[item]}</option>)}
                     </select>
                   </label>
                   <label>
-                    <span className="label-line">{labels.extraction}</span>
+                    <InfoLabel label={labels.extraction} body={help("helpExtraction", labels.opticalIndicatorNotice)} onOpen={setInfoModal} />
                     <select value={extraction ? "on" : "off"} onChange={(event) => setExtraction(event.target.value === "on")}>
                       <option value="on">{labels.extractionOn}</option>
                       <option value="off">{labels.extractionOff}</option>
@@ -295,20 +327,20 @@ export function KerfAdvisor() {
               <section className="mini-panel">
                 <h2>{labels.calibrationMode}</h2>
                 <label>
-                  <span className="label-line">{labels.calibrationMode}</span>
+                  <InfoLabel label={labels.calibrationMode} body={help("helpCalibrationMode", labels.calibrationTest)} onOpen={setInfoModal} />
                   <select value={calibrationMode} onChange={(event) => setCalibrationMode(event.target.value as KerfCalibrationMode)}>
                     {KERF_CALIBRATION_MODES.map((item) => <option key={item} value={item}>{labels[item]}</option>)}
                   </select>
                 </label>
                 <div className="field-row compact-row">
-                  <label><span className="label-line">{labels.topKerf} (mm)</span><input type="number" step="0.001" value={topKerf} onChange={(event) => setTopKerf(event.target.value)} /></label>
-                  <label><span className="label-line">{labels.bottomKerf} (mm)</span><input type="number" step="0.001" value={bottomKerf} onChange={(event) => setBottomKerf(event.target.value)} /></label>
+                  <label><InfoLabel label={`${labels.topKerf} (mm)`} body={help("helpTopKerf", labels.measuredKerf)} onOpen={setInfoModal} /><input type="number" step="0.001" value={topKerf} onChange={(event) => setTopKerf(event.target.value)} /></label>
+                  <label><InfoLabel label={`${labels.bottomKerf} (mm)`} body={help("helpBottomKerf", labels.measuredKerf)} onOpen={setInfoModal} /><input type="number" step="0.001" value={bottomKerf} onChange={(event) => setBottomKerf(event.target.value)} /></label>
                 </div>
-                <label><span className="label-line">{labels.averageKerf} (mm)</span><input type="number" step="0.001" value={averageKerf} onChange={(event) => setAverageKerf(event.target.value)} /></label>
+                <label><InfoLabel label={`${labels.averageKerf} (mm)`} body={help("helpAverageKerf", labels.measuredKerf)} onOpen={setInfoModal} /><input type="number" step="0.001" value={averageKerf} onChange={(event) => setAverageKerf(event.target.value)} /></label>
                 <div className="field-row compact-row">
-                  <label><span className="label-line">{labels.designedWidth} (mm)</span><input type="number" step="0.01" value={designedWidth} onChange={(event) => setDesignedWidth(event.target.value)} /></label>
-                  <label><span className="label-line">{labels.measuredWidth} (mm)</span><input type="number" step="0.01" value={measuredWidth} onChange={(event) => setMeasuredWidth(event.target.value)} /></label>
-                  <label><span className="label-line">{labels.cutLines}</span><input type="number" step="1" value={cutLines} onChange={(event) => setCutLines(event.target.value)} /></label>
+                  <label><InfoLabel label={`${labels.designedWidth} (mm)`} body={help("helpDesignedWidth", labels.calibrationTest)} onOpen={setInfoModal} /><input type="number" step="0.01" value={designedWidth} onChange={(event) => setDesignedWidth(event.target.value)} /></label>
+                  <label><InfoLabel label={`${labels.measuredWidth} (mm)`} body={help("helpMeasuredWidth", labels.calibrationTest)} onOpen={setInfoModal} /><input type="number" step="0.01" value={measuredWidth} onChange={(event) => setMeasuredWidth(event.target.value)} /></label>
+                  <label><InfoLabel label={labels.cutLines} body={help("helpCutLines", labels.calibrationTest)} onOpen={setInfoModal} /><input type="number" step="1" value={cutLines} onChange={(event) => setCutLines(event.target.value)} /></label>
                 </div>
               </section>
             ) : null}
@@ -322,7 +354,7 @@ export function KerfAdvisor() {
                   <button className="button secondary" type="button" onClick={importJson}>{labels.importJson}</button>
                 </div>
                 <label>
-                  <span className="label-line">{labels.jsonData}</span>
+                  <InfoLabel label={labels.jsonData} body={help("helpJsonData", labels.localStorageNote)} onOpen={setInfoModal} />
                   <textarea value={jsonData} onChange={(event) => setJsonData(event.target.value)} />
                 </label>
                 <p className="small">{labels.localStorageNote}</p>
@@ -354,13 +386,28 @@ export function KerfAdvisor() {
               </article>
             </div>
             <div className="panel panel-pad">
-              <h2>{labels.lightBurnNotes}</h2>
+              <h2 className="label-line">
+                {labels.lightBurnNotes}
+                <InfoButton title={labels.lightBurnNotes} body={help("helpLightBurnNotes", labels.calibrationTest)} onOpen={setInfoModal} />
+              </h2>
               <textarea className="notes-output" readOnly value={result.lightBurnNotes} />
               <button className="button secondary" type="button" onClick={() => navigator.clipboard?.writeText(result.lightBurnNotes)}>{labels.copyNotes}</button>
             </div>
           </section>
         </div>
       </section>
+
+      {infoModal ? (
+        <div className="modal-backdrop" role="dialog" aria-modal="true" onClick={() => setInfoModal(null)}>
+          <div className="modal" onClick={(event) => event.stopPropagation()}>
+            <div className="modal-head">
+              <h2>{infoModal.title}</h2>
+              <button className="button secondary modal-close" type="button" onClick={() => setInfoModal(null)} aria-label="Close">x</button>
+            </div>
+            <p className="modal-body-text">{infoModal.body}</p>
+          </div>
+        </div>
+      ) : null}
     </main>
   );
 }

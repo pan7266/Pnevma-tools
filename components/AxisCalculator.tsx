@@ -3,8 +3,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import { useAppSettings } from "@/components/AppSettings";
-import { AxisIntervalGraph } from "@/components/AxisGraphs";
-import { GraphModal } from "@/components/GraphModal";
 import { AxisIcon } from "@/components/ToolIcons";
 import { InfoButton } from "@/components/ui/InfoButton";
 import { MetricCard } from "@/components/ui/MetricCard";
@@ -26,7 +24,6 @@ import { getLocale } from "@/locales";
 import type { AxisInputs, AxisKey, AxisMechanics, AxisResult, MotorPreset, NumericInput } from "@/types";
 
 type InfoModal = { title: string; body?: string; content?: ReactNode } | null;
-type AxisGraphModal = "interval" | null;
 const AXIS_STORAGE_KEY = "pnevma.axis.values.v3";
 
 const BELT_PITCH_PRESETS = [
@@ -339,7 +336,6 @@ export function AxisCalculator() {
   const [storageReady, setStorageReady] = useState(false);
   const [result, setResult] = useState<AxisResult | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [graphModal, setGraphModal] = useState<AxisGraphModal>(null);
   const [infoModal, setInfoModal] = useState<InfoModal>(null);
   const unit = lengthUnit(unitSystem);
 
@@ -477,9 +473,6 @@ export function AxisCalculator() {
         <Field label={labelWithUnit(labels.lineInterval, unit)} value={displayLengthValue(values.lineInterval, unitSystem, 4)} placeholder={unitSystem === "imperial" ? "0.0024 in" : "0.0600 mm"} description={labels.lineIntervalDescription} onInfo={setInfoModal} onChange={updateLineInterval} />
         <Field label={labels.dpi} value={displayDpiValue(values.dpi)} step="0.1" placeholder="423.3 DPI" description={labels.dpiDescription} onInfo={setInfoModal} onChange={updateDpi} />
         <Field label={labelWithUnit(labels.spotDiameter, unit)} value={displayLengthValue(values.spotDiameter, unitSystem, 6)} placeholder={unitSystem === "imperial" ? "0.0047 in" : "0.12 mm"} description={labels.spotDiameterDescription} onInfo={setInfoModal} onChange={updateSpotDiameter} />
-        <div className="stack">
-          <button className="button" type="button" onClick={() => void runCalculation()}>{labels.calculate}</button>
-        </div>
       </section>
 
       <section className="axis-layout">
@@ -575,11 +568,6 @@ export function AxisCalculator() {
           </div>
         </section>
 
-        <aside className="panel visual-panel">
-          {result ? (
-            <AxisIntervalGraph result={result} labels={labels} unitSystem={unitSystem} onExpand={() => setGraphModal("interval")} />
-          ) : null}
-        </aside>
       </section>
 
       {infoModal ? (
@@ -594,11 +582,6 @@ export function AxisCalculator() {
         </div>
       ) : null}
 
-      {graphModal && result ? (
-        <GraphModal title={labels.intervalGraphTitle} closeLabel={labels.close} onClose={() => setGraphModal(null)}>
-          <AxisIntervalGraph result={result} labels={labels} unitSystem={unitSystem} expanded />
-        </GraphModal>
-      ) : null}
     </main>
   );
 }
