@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { useAppSettings } from "@/components/AppSettings";
 import { LanguageToggle } from "@/components/LanguageToggle";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { AxisIcon, PnevmaMark, SpotIcon } from "@/components/ToolIcons";
+import { AxisIcon, KerfIcon, PnevmaMark, SpotIcon } from "@/components/ToolIcons";
 import { UnitToggle } from "@/components/UnitToggle";
 import { getLocale } from "@/locales";
 
@@ -24,6 +24,13 @@ function getTools(labels: Record<string, string>) {
     name: labels.axisToolName,
     meta: labels.axisToolMeta,
     icon: <AxisIcon />,
+  },
+  {
+    href: "/kerf",
+    key: "kerf",
+    name: labels.kerfToolName,
+    meta: labels.kerfToolMeta,
+    icon: <KerfIcon />,
   },
   ];
 }

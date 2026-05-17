@@ -144,6 +144,7 @@ export interface SpotResult {
   atmosphereLostWatt: number;
   alignmentLostWatt: number;
   pulseEnergyMj: number;
+  spotTemperatureC: number;
   currentBestMa: number | null;
   hasAmp: boolean;
   ampValue: number;
@@ -281,3 +282,166 @@ export interface AxisResult {
   graphData: AxisGraphData | null;
   warnings: AxisWarning[];
 }
+
+export type KerfMaterialFamily =
+  | "cast_acrylic"
+  | "xt_acrylic"
+  | "mirror_acrylic"
+  | "birch_plywood"
+  | "ilomba_plywood"
+  | "mdf"
+  | "paper_cardstock"
+  | "leather"
+  | "fabric"
+  | "nonwoven"
+  | "unknown_plastic";
+
+export type KerfOperation =
+  | "cut_through"
+  | "kiss_cut"
+  | "score"
+  | "engrave"
+  | "photo_engrave"
+  | "inlay_precision_fit";
+
+export type KerfQualityGoal =
+  | "clean_top_edge"
+  | "clean_bottom_exit"
+  | "minimum_taper"
+  | "minimum_char"
+  | "minimum_melting"
+  | "polished_acrylic_edge"
+  | "best_dimensional_accuracy"
+  | "press_fit_accuracy"
+  | "fast_production"
+  | "safe_mirror_backing";
+
+export type KerfConfidence = "high" | "moderate" | "low";
+
+export type KerfCalibrationMode =
+  | "multi_line_strip"
+  | "outside_square"
+  | "inside_hole"
+  | "slot_tab_fit"
+  | "inlay_fit"
+  | "focus_ladder";
+
+export interface OpticalProfile {
+  id: string;
+  profileName: string;
+  wavelengthUm: number;
+  lensFocalLengthMm: number;
+  measuredSpotDiameterUm: number;
+  measuredSpotDiameterMm: number;
+  waistRadiusMm: number;
+  rayleighRangeMm: number;
+  depthOfFocusMm: number;
+  confocalParameterMm: number;
+  m2?: number;
+  tubePowerW?: number;
+  tubeCurrentMa?: number;
+  measuredOutputPowerW?: number;
+  updatedAt?: string;
+}
+
+export interface KerfMaterialPreset {
+  id: string;
+  labelKey: string;
+  family: KerfMaterialFamily;
+  subtypes: string[];
+  thicknessesMm: number[];
+  safetyLevel: "ok" | "warn" | "blocked";
+}
+
+export interface KerfAdvisorInputs {
+  opticalProfile: OpticalProfile;
+  materialId: string;
+  family: KerfMaterialFamily;
+  subtype?: string;
+  thicknessMm: number;
+  operation: KerfOperation;
+  qualityGoal: KerfQualityGoal;
+  airAssist?: "off" | "low" | "medium" | "high";
+  extraction?: boolean;
+  calibratedKerfMm?: number;
+  topKerfMm?: number;
+  bottomKerfMm?: number;
+  averageKerfMm?: number;
+  xAxisKerfMm?: number;
+  yAxisKerfMm?: number;
+  fitClearanceMm?: number;
+  calibrationMode?: KerfCalibrationMode;
+  calibration?: {
+    designedWidthMm?: number;
+    measuredWidthMm?: number;
+    numberOfCutLines?: number;
+    designedSizeMm?: number;
+    measuredOutsideSizeMm?: number;
+    designedHoleSizeMm?: number;
+    measuredHoleSizeMm?: number;
+  };
+}
+
+export interface KerfAdvisorResult {
+  blocked: boolean;
+  recommendedFocusDepthMm: number;
+  recommendedFocusPercent: number;
+  acceptableFocusMinMm: number;
+  acceptableFocusMaxMm: number;
+  acceptableFocusMinPercent: number;
+  acceptableFocusMaxPercent: number;
+  placementLabelKey: string;
+  topDiameterMm: number;
+  middleDiameterMm: number;
+  bottomDiameterMm: number;
+  rayleighRangeMm: number;
+  confocalParameterMm: number;
+  beamSpreadRatio: number;
+  opticalSymmetryError: number;
+  opticalTaperTendency: "low" | "medium" | "high";
+  expectedKerfBehavior: string[];
+  expectedBenefits: string[];
+  expectedRisks: string[];
+  warnings: string[];
+  confidence: KerfConfidence;
+  confidenceScore: number;
+  confidenceExplanation: string;
+  recommendedCalibrationTest: string[];
+  measuredKerfMm?: number;
+  externalContourOffsetMm?: number;
+  internalContourOffsetMm?: number;
+  lightBurnNotes: string;
+}
+
+export type UserMaterialProfile = {
+  id: string;
+  name: string;
+  baseMaterialId: string;
+  family: KerfMaterialFamily;
+  subtype?: string;
+  supplier?: string;
+  thicknessMm: number;
+  color?: string;
+  finish?: string;
+  opticalProfileId: string;
+  operation: KerfOperation;
+  qualityGoal: string;
+  recommendedFocusDepthMm: number;
+  acceptableFocusMinMm: number;
+  acceptableFocusMaxMm: number;
+  measuredKerfMm?: number;
+  topKerfMm?: number;
+  bottomKerfMm?: number;
+  averageKerfMm?: number;
+  xAxisKerfMm?: number;
+  yAxisKerfMm?: number;
+  powerPercent?: number;
+  tubeCurrentMa?: number;
+  speedMmSec?: number;
+  passes?: number;
+  airAssist?: "off" | "low" | "medium" | "high";
+  confidence: KerfConfidence;
+  notes?: string[];
+  createdAt: string;
+  updatedAt: string;
+};

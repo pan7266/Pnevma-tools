@@ -3,8 +3,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import { useAppSettings } from "@/components/AppSettings";
-import { AxisIntervalGraph, EngravingLineGraph } from "@/components/AxisGraphs";
-import { GraphModal } from "@/components/GraphModal";
 import { AxisIcon } from "@/components/ToolIcons";
 import { InfoButton } from "@/components/ui/InfoButton";
 import { MetricCard } from "@/components/ui/MetricCard";
@@ -26,7 +24,6 @@ import { getLocale } from "@/locales";
 import type { AxisInputs, AxisKey, AxisMechanics, AxisResult, MotorPreset, NumericInput } from "@/types";
 
 type InfoModal = { title: string; body?: string; content?: ReactNode } | null;
-type AxisGraphModal = "interval" | "engraving" | null;
 const AXIS_STORAGE_KEY = "pnevma.axis.values.v3";
 
 const BELT_PITCH_PRESETS = [
@@ -257,7 +254,7 @@ function AxisCard({
         />
         {showBelt ? (
           <>
-            <div>
+            <label className="belt-preset-field">
               <span className="label-line">
                 {labels.beltPitchPreset}
                 <InfoButton title={labels.beltPitchPreset} body={desc("beltPitch")} onOpen={onInfo} />
@@ -274,7 +271,8 @@ function AxisCard({
                   </button>
                 ))}
               </div>
-            </div>
+              <span className="field-hint">{desc("beltPitch")}</span>
+            </label>
             <Field
               label={labelWithUnit(labels.beltPitch, unit)}
               value={displayLengthValue(axis.beltPitch, unitSystem, 4)}
@@ -338,7 +336,6 @@ export function AxisCalculator() {
   const [storageReady, setStorageReady] = useState(false);
   const [result, setResult] = useState<AxisResult | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [graphModal, setGraphModal] = useState<AxisGraphModal>(null);
   const [infoModal, setInfoModal] = useState<InfoModal>(null);
   const unit = lengthUnit(unitSystem);
 
@@ -386,10 +383,10 @@ export function AxisCalculator() {
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
-      if (values.liveCalculation) void runCalculation();
+      void runCalculation();
     }, 80);
     return () => window.clearTimeout(timer);
-  }, [runCalculation, values.liveCalculation]);
+  }, [runCalculation]);
 
   function updateAxis(axisKey: AxisKey, field: keyof AxisMechanics, value: string) {
     const preset = field === "motorPresetId" ? getMotorPreset(value) : null;
@@ -476,17 +473,10 @@ export function AxisCalculator() {
         <Field label={labelWithUnit(labels.lineInterval, unit)} value={displayLengthValue(values.lineInterval, unitSystem, 4)} placeholder={unitSystem === "imperial" ? "0.0024 in" : "0.0600 mm"} description={labels.lineIntervalDescription} onInfo={setInfoModal} onChange={updateLineInterval} />
         <Field label={labels.dpi} value={displayDpiValue(values.dpi)} step="0.1" placeholder="423.3 DPI" description={labels.dpiDescription} onInfo={setInfoModal} onChange={updateDpi} />
         <Field label={labelWithUnit(labels.spotDiameter, unit)} value={displayLengthValue(values.spotDiameter, unitSystem, 6)} placeholder={unitSystem === "imperial" ? "0.0047 in" : "0.12 mm"} description={labels.spotDiameterDescription} onInfo={setInfoModal} onChange={updateSpotDiameter} />
-        <div className="stack">
-          <button className="button" type="button" onClick={() => void runCalculation()}>{labels.calculate}</button>
-          <label className="check-label">
-            <input type="checkbox" checked={values.liveCalculation} onChange={(event) => updateRoot("liveCalculation", event.target.checked)} />
-            <span>{labels.liveCalculation}</span>
-          </label>
-        </div>
       </section>
 
       <section className="axis-layout">
-        <aside className="stack axis-grid" aria-label="Axis mechanics">
+        <aside className="stack axis-grid" aria-label={labels.axisMechanics}>
           <AxisCard axisKey="x" axis={values.axes.x} active={activeAxis === "x"} labels={labels} unitSystem={unitSystem} onChange={updateAxis} onInfo={setInfoModal} />
           <AxisCard axisKey="y" axis={values.axes.y} active={activeAxis === "y"} labels={labels} unitSystem={unitSystem} onChange={updateAxis} onInfo={setInfoModal} />
         </aside>
@@ -578,14 +568,6 @@ export function AxisCalculator() {
           </div>
         </section>
 
-        <aside className="panel visual-panel">
-          {result ? (
-            <>
-              <AxisIntervalGraph result={result} labels={labels} unitSystem={unitSystem} onExpand={() => setGraphModal("interval")} />
-              <EngravingLineGraph result={result} labels={labels} unitSystem={unitSystem} onExpand={() => setGraphModal("engraving")} />
-            </>
-          ) : null}
-        </aside>
       </section>
 
       {infoModal ? (
@@ -600,15 +582,6 @@ export function AxisCalculator() {
         </div>
       ) : null}
 
-      {graphModal && result ? (
-        <GraphModal title={graphModal === "interval" ? labels.intervalGraphTitle : labels.engravingLineGraphTitle} closeLabel={labels.close} onClose={() => setGraphModal(null)}>
-          {graphModal === "interval" ? (
-            <AxisIntervalGraph result={result} labels={labels} unitSystem={unitSystem} expanded />
-          ) : (
-            <EngravingLineGraph result={result} labels={labels} unitSystem={unitSystem} expanded />
-          )}
-        </GraphModal>
-      ) : null}
     </main>
   );
 }

@@ -156,7 +156,7 @@ export function calculateSpot(
   const atmosphereLostWatt = selectedWatt * mirrorTransmission * (1 - atmosphereTransmission);
   const alignmentLostWatt =
     selectedWatt * mirrorTransmission * atmosphereTransmission * (1 - alignmentTransmission);
-  const pulseEnergyMj = (selectedWatt / hz) * 1000;
+  const pulseEnergyMj = ((selectedWatt * beamCombinerTransmission) / hz) * 1000;
   const currentBestMa = estimateBestCurrentMa(source);
   const currentMinMa = currentBestMa ? source.currentMinMa || Math.max(4, currentBestMa * 0.18) : null;
   const currentPowerRatio = clamp(selectedWatt / Math.max(powerBaseWatt, 1), 0, 1.15);
@@ -227,6 +227,7 @@ export function calculateSpot(
 
   const spotAreaMm2 = Math.PI * Math.pow(Math.max(spot, 0.0001) / 2, 2);
   const powerDensityWPerMm2 = deliveredWatt / spotAreaMm2;
+  const spotTemperatureC = clamp(20 + Math.pow(Math.max(powerDensityWPerMm2, 0), 0.58) * 26, 20, 6500);
   const assumptions = [
     source.id === "manual" ? "assumptionManualSource" : "assumptionPresetSource",
     "assumptionMirrorAperture",
@@ -350,6 +351,7 @@ export function calculateSpot(
     atmosphereLostWatt,
     alignmentLostWatt,
     pulseEnergyMj,
+    spotTemperatureC,
     currentBestMa,
     hasAmp,
     ampValue,

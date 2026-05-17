@@ -36,33 +36,32 @@ export function BeamPreview({
   unitSystem,
   onExpand,
   expanded = false,
-  onFocalLengthChange,
 }: Pick<GraphProps, "result" | "labels" | "unitSystem" | "onExpand" | "expanded"> & {
-  onFocalLengthChange?: (value: number) => void;
+  onFocalLengthChange?: never;
 }) {
-  const centerY = 112;
+  const centerY = 122;
   const startX = 46;
   const lensX = 286;
   const endX = 760;
-  const focalOptions = FOCAL_LENGTHS.map((option) => option.mm);
-  const selectedFocalIndex = focalOptions.reduce((best, option, index) => (
-    Math.abs(option - result.focalLength) < Math.abs(focalOptions[best] - result.focalLength) ? index : best
-  ), 0);
+  const focalOptions = FOCAL_LENGTHS.filter((option) => option.mm <= 228.6).map((option) => option.mm);
   const maxPresetFocal = Math.max(...focalOptions);
-  const focalScale = (endX - lensX - 48) / maxPresetFocal;
-  const focusX = clamp(lensX + result.focalLength * focalScale, lensX + 40, endX - 36);
-  const incomingHalf = clamp(result.sourceBeam * 5.2, 18, 58);
-  const lensHalf = clamp(result.lensDiameter * 2.35, 44, 82);
-  const beamAtLensHalf = clamp(result.effectiveBeam * 5.2, 17, lensHalf - 7);
-  const spotHalf = clamp(result.spot * 410, 3.2, 12);
-  const outputHalf = clamp(spotHalf + (endX - focusX) * 0.18, 24, 62);
-  const lensPath =
-    result.shape.labelKey === "convex"
-      ? `M${lensX - 13} ${centerY - lensHalf} C${lensX - 46} ${centerY - lensHalf * 0.54} ${lensX - 46} ${centerY + lensHalf * 0.54} ${lensX - 13} ${centerY + lensHalf} C${lensX + 20} ${centerY + lensHalf * 0.54} ${lensX + 20} ${centerY - lensHalf * 0.54} ${lensX - 13} ${centerY - lensHalf} Z`
-      : `M${lensX - 18} ${centerY - lensHalf} C${lensX - 48} ${centerY - lensHalf * 0.58} ${lensX - 48} ${centerY + lensHalf * 0.58} ${lensX - 18} ${centerY + lensHalf} L${lensX + 18} ${centerY + lensHalf} C${lensX + 4} ${centerY + lensHalf * 0.36} ${lensX + 4} ${centerY - lensHalf * 0.36} ${lensX + 18} ${centerY - lensHalf} Z`;
+  const focalScale = (endX - lensX - 60) / maxPresetFocal;
+  const focusX = clamp(lensX + result.focalLength * focalScale, lensX + 44, endX - 48);
+  const pxPerMm = Math.min(150 / Math.max(result.lensDiameter, result.expandedBeam, result.sourceBeam, 1), 7.8);
+  const incomingHalf = clamp((result.effectiveBeam * pxPerMm) / 2, 5, 58);
+  const lensHalf = clamp((result.lensDiameter * pxPerMm) / 2, 28, 76);
+  const beamAtLensHalf = clamp((result.effectiveBeam * pxPerMm) / 2, 4, Math.max(lensHalf - 5, 5));
+  const alignmentOffset = clamp(result.alignmentLoss * lensHalf * 1.4, -14, 14);
+  const lensCenterY = centerY + alignmentOffset;
+  const focusY = centerY + alignmentOffset * 0.62;
+  const postLensDrift = alignmentOffset * 1.35;
+  const spotHalf = clamp(result.spot * 360, 3.2, 10);
+  const outputHalf = clamp(spotHalf + (endX - focusX) * 0.11, 18, 54);
   const open = onExpand ? () => onExpand("beam") : undefined;
   const rayColor = result.clipped ? "var(--amber)" : "var(--beam)";
   const paraxialColor = "var(--primary)";
+  const focalDots = result.focalLength > maxPresetFocal ? [...focalOptions, result.focalLength] : focalOptions;
+  const focalLabelY = 236;
 
   return (
     <div
@@ -72,56 +71,66 @@ export function BeamPreview({
       onClick={open}
       onKeyDown={(event) => graphKeydown(event, open)}
     >
-      <svg viewBox="0 0 800 240" role="img" aria-label={labels.beamPathTitle}>
-        <rect width="800" height="240" fill="transparent" />
+      <svg viewBox="0 0 800 260" role="img" aria-label={labels.beamPathTitle}>
+        <rect width="800" height="260" fill="transparent" />
         <line x1={startX} x2={endX} y1={centerY} y2={centerY} stroke="var(--axis)" strokeDasharray="5 7" opacity="0.72" />
 
-        <path d={`M${startX} ${centerY - incomingHalf} L${lensX} ${centerY - beamAtLensHalf} L${focusX} ${centerY - spotHalf} L${endX} ${centerY - outputHalf}`} fill="none" stroke={rayColor} strokeWidth="1.8" strokeLinecap="round" />
-        <path d={`M${startX} ${centerY + incomingHalf} L${lensX} ${centerY + beamAtLensHalf} L${focusX} ${centerY + spotHalf} L${endX} ${centerY + outputHalf}`} fill="none" stroke={rayColor} strokeWidth="1.8" strokeLinecap="round" />
-        <path d={`M${startX} ${centerY - incomingHalf * 0.48} L${lensX} ${centerY - beamAtLensHalf * 0.48} L${focusX} ${centerY} L${endX} ${centerY + outputHalf * 0.48}`} fill="none" stroke={paraxialColor} strokeWidth="1.4" strokeLinecap="round" opacity="0.72" />
-        <path d={`M${startX} ${centerY + incomingHalf * 0.48} L${lensX} ${centerY + beamAtLensHalf * 0.48} L${focusX} ${centerY} L${endX} ${centerY - outputHalf * 0.48}`} fill="none" stroke={paraxialColor} strokeWidth="1.4" strokeLinecap="round" opacity="0.72" />
+        <path d={`M${startX} ${centerY - incomingHalf} L${lensX} ${centerY - incomingHalf} L${lensX + 10} ${lensCenterY - beamAtLensHalf} L${focusX} ${focusY - spotHalf} L${endX} ${centerY + postLensDrift - outputHalf}`} fill="none" stroke={rayColor} strokeWidth="1.45" strokeLinecap="round" />
+        <path d={`M${startX} ${centerY + incomingHalf} L${lensX} ${centerY + incomingHalf} L${lensX + 10} ${lensCenterY + beamAtLensHalf} L${focusX} ${focusY + spotHalf} L${endX} ${centerY + postLensDrift + outputHalf}`} fill="none" stroke={rayColor} strokeWidth="1.45" strokeLinecap="round" />
+        <path d={`M${startX} ${centerY} L${lensX + 10} ${lensCenterY} L${focusX} ${focusY} L${endX} ${centerY + postLensDrift}`} fill="none" stroke={paraxialColor} strokeWidth="1.1" strokeLinecap="round" opacity="0.72" />
 
-        <path d={lensPath} fill="color-mix(in srgb, var(--primary) 34%, var(--panel-solid))" stroke="var(--primary)" strokeWidth="2" opacity="0.92" />
-        <line x1={lensX} x2={lensX} y1={centerY - lensHalf - 12} y2={centerY + lensHalf + 12} stroke="var(--line)" strokeWidth="1" />
+        <rect x={lensX - 3} y={centerY - lensHalf} width="6" height={lensHalf * 2} rx="3" fill="color-mix(in srgb, var(--primary) 34%, var(--panel-solid))" stroke="var(--primary)" strokeWidth="1.6" opacity="0.94" />
+        <line x1={lensX} x2={lensX} y1={centerY - lensHalf - 12} y2={centerY + lensHalf + 12} stroke="var(--line)" strokeWidth="0.8" />
 
         <line x1={focusX} x2={focusX} y1={centerY - 40} y2={centerY + 40} stroke="var(--beam)" strokeWidth="1.4" strokeDasharray="4 5" />
-        <ellipse cx={focusX} cy={centerY} rx={spotHalf} ry={Math.max(spotHalf * 1.7, 5)} fill="var(--beam)" opacity="0.9" />
+        <circle cx={focusX} cy={focusY} r={Math.max(spotHalf, 3.6)} fill="var(--beam)" opacity="0.92" />
+        <line x1={focusX - 14} x2={focusX + 14} y1={focusY} y2={focusY} stroke="var(--ink)" strokeWidth="0.9" opacity="0.5" />
+        <line x1={focusX} x2={focusX} y1={focusY - 14} y2={focusY + 14} stroke="var(--ink)" strokeWidth="0.9" opacity="0.5" />
 
         <text x={startX} y="32" fill="var(--muted)" fontSize="12">{labels.sourceBeam}: {formatLength(result.sourceBeam, unitSystem, 2)}</text>
-        <text x={lensX} y={centerY + lensHalf + 28} fill="var(--muted)" fontSize="12" textAnchor="middle">{labels.lens}: {formatLength(result.lensDiameter, unitSystem, 2)}</text>
-        <text x={focusX} y={centerY - 52} fill="var(--ink)" fontSize="13" fontWeight="900" textAnchor="middle">
+        <text x={startX} y="48" fill="var(--muted)" fontSize="10.5">{labels.effectiveBeam}: {formatLength(result.effectiveBeam, unitSystem, 2)}</text>
+        <text x={lensX} y={Math.min(centerY + lensHalf + 28, 232)} fill="var(--muted)" fontSize="12" textAnchor="middle">{labels.lens}: {formatLength(result.lensDiameter, unitSystem, 2)}</text>
+        <text x={focusX} y={Math.max(focusY - 42, 36)} fill="var(--ink)" fontSize="13" fontWeight="900" textAnchor="middle">
           {labels.spotDiameter}: {formatLength(result.spot, unitSystem, 4)}
         </text>
-        <text x={focusX} y={centerY + 62} fill="var(--muted)" fontSize="11" textAnchor="middle">
+        <text x={focusX} y={Math.min(focusY + 58, 236)} fill="var(--muted)" fontSize="11" textAnchor="middle">
           {labels.focalLength}: {formatLength(result.focalLength, unitSystem, 2)}
         </text>
         <text x={endX} y="32" fill="var(--muted)" fontSize="12" textAnchor="end">
           {labels.effectiveBeam}: {formatLength(result.effectiveBeam, unitSystem, 2)}
         </text>
+        {result.alignmentLoss > 0 ? (
+          <text x={lensX} y={Math.max(centerY - lensHalf - 20, 30)} fill="var(--amber)" fontSize="11" textAnchor="middle">
+            {labels.alignmentImpact}: {formatCompact(result.alignmentLoss * 100, 1)}%
+          </text>
+        ) : null}
+        <text x={endX} y="48" fill="var(--muted)" fontSize="10.5" textAnchor="end">
+          {labels.opticalTaper}: {labels[result.beamStability]}
+        </text>
+        <line x1={lensX} x2={endX - 20} y1={focalLabelY} y2={focalLabelY} stroke="var(--grid)" />
+        {focalDots.map((focal) => {
+          const x = clamp(lensX + focal * focalScale, lensX + 8, endX - 18);
+          const selected = Math.abs(focal - result.focalLength) < 0.02;
+          return (
+            <g key={focal}>
+              <circle cx={x} cy={focalLabelY} r={selected ? 5 : 3.2} fill={selected ? "var(--beam)" : "var(--primary)"} opacity={selected ? 1 : 0.72}>
+                <title>{labels.focalLength}: {formatLength(focal, unitSystem, 2)}</title>
+              </circle>
+              {selected || expanded ? <text x={x} y={focalLabelY - 9} fill="var(--muted)" fontSize="9" textAnchor="middle">{formatLength(focal, unitSystem, 1)}</text> : null}
+            </g>
+          );
+        })}
       </svg>
-      {onFocalLengthChange ? (
-        <div className="graph-slider-row" onClick={(event) => event.stopPropagation()}>
-          <span>{labels.selectedFocalLength}</span>
-          <input
-            type="range"
-            min="0"
-            max={focalOptions.length - 1}
-            step="1"
-            value={selectedFocalIndex}
-            aria-label={labels.selectedFocalLength}
-            onChange={(event) => onFocalLengthChange(focalOptions[Number(event.target.value)] || result.focalLength)}
-          />
-          <strong>{formatLength(result.focalLength, unitSystem, 2)}</strong>
-        </div>
-      ) : null}
     </div>
   );
+
 }
 
 export function PulseHzGraph({
   hz,
   selectedWatt,
   pulseEnergyMj,
+  spotTemperatureC,
   labels,
   expanded = false,
   onHzChange,
@@ -130,12 +139,12 @@ export function PulseHzGraph({
   hz: number;
   selectedWatt: number;
   pulseEnergyMj: number;
+  spotTemperatureC?: number;
   labels: Record<string, string>;
   expanded?: boolean;
   onHzChange: (hz: number) => void;
   onExpand?: () => void;
 }) {
-  const [selectedX, setSelectedX] = useState<number | null>(null);
   const minHz = 1000;
   const maxHz = 100000;
   const width = 520;
@@ -143,13 +152,12 @@ export function PulseHzGraph({
   const axisLeft = 42;
   const axisRight = width - 24;
   const axisW = axisRight - axisLeft;
-  const normalizedHz = clamp((hz - minHz) / (maxHz - minHz), 0, 1);
-  const barX = axisLeft + normalizedHz * axisW;
-  const cycles = clamp(hz / 12000, expanded ? 1.1 : 0.7, expanded ? 12 : 7);
-  const path = Array.from({ length: 90 }, (_, index) => {
-    const ratio = index / 89;
+  const timeWindowMs = expanded ? 0.5 : 0.25;
+  const cycles = clamp(hz * (timeWindowMs / 1000), expanded ? 1.5 : 1, expanded ? 48 : 22);
+  const path = Array.from({ length: 220 }, (_, index) => {
+    const ratio = index / 219;
     const x = axisLeft + ratio * axisW;
-    const y = height / 2 + Math.sin(ratio * cycles * Math.PI * 2) * (expanded ? 72 : 38);
+    const y = height / 2 + Math.sin(ratio * cycles * Math.PI * 2) * (expanded ? 62 : 30);
     return `${index === 0 ? "M" : "L"}${x.toFixed(1)} ${y.toFixed(1)}`;
   }).join(" ");
 
@@ -157,7 +165,6 @@ export function PulseHzGraph({
     const rect = currentTarget.getBoundingClientRect();
     const ratio = clamp((clientX - rect.left - axisLeft * (rect.width / width)) / (axisW * (rect.width / width)), 0, 1);
     onHzChange(Math.round((minHz + ratio * (maxHz - minHz)) / 100) * 100);
-    setSelectedX(axisLeft + ratio * axisW);
   }
 
   return (
@@ -166,11 +173,6 @@ export function PulseHzGraph({
         <span>{labels.pulseGraphTitle}</span>
         <strong>{formatCompact(hz, 0)} Hz</strong>
       </div>
-      {!expanded && onExpand ? (
-        <button type="button" className="graph-plus" aria-label={labels.expandGraphPlus} onClick={onExpand}>
-          +
-        </button>
-      ) : null}
       <svg
         viewBox={`0 0 ${width} ${height}`}
         role="img"
@@ -195,17 +197,17 @@ export function PulseHzGraph({
       >
         <rect width={width} height={height} fill="transparent" />
         <line x1={axisLeft} x2={axisRight} y1={height / 2} y2={height / 2} stroke="var(--axis)" strokeWidth="1.5" />
-        <path d={path} fill="none" stroke="var(--primary)" strokeWidth={expanded ? 3 : 2.2} />
-        <line x1={barX} x2={barX} y1="20" y2={height - 26} stroke="var(--beam)" strokeWidth="4" strokeLinecap="round">
-          <title>{labels.pulseSelectedHz}: {formatCompact(hz, 0)} Hz</title>
-        </line>
-        {selectedX ? <circle cx={selectedX} cy={height / 2} r="5" fill="var(--beam)" /> : null}
+        <path d={path} fill="none" stroke="var(--primary)" strokeWidth={expanded ? 1.35 : 1.1} />
+        <text x={axisLeft} y="18" fill="var(--muted)" fontSize="10">
+          {labels.pulseSelectedHz}: {formatCompact(hz, 0)} Hz · {formatCompact(timeWindowMs, 2)} ms
+        </text>
         <text x={axisLeft} y={height - 8} fill="var(--muted)" fontSize="11">{formatCompact(minHz, 0)} Hz</text>
         <text x={axisRight} y={height - 8} fill="var(--muted)" fontSize="11" textAnchor="end">{formatCompact(maxHz, 0)} Hz</text>
       </svg>
       <div className="preview-metrics">
         <span>{labels.pulseEnergyPerPulse}: <strong>{formatNumber(pulseEnergyMj, 3)} mJ</strong></span>
         <span>{labels.selectedWatt}: <strong>{formatCompact(selectedWatt, 2)} W</strong></span>
+        {spotTemperatureC ? <span>{labels.estimatedSpotTemperature}: <strong>{formatCompact(spotTemperatureC, 0)} °C</strong></span> : null}
       </div>
       {expanded ? (
         <div className="graph-slider-row pulse-hz-slider">
@@ -241,7 +243,21 @@ export function LensShapePreview({ shape, labels }: { shape: string; labels: Rec
   );
 }
 
-export function MirrorFinishPreview({ finishKey, label, reflectivity, labels }: { finishKey: string; label: string; reflectivity: number; labels: Record<string, string> }) {
+export function MirrorFinishPreview({
+  finishKey,
+  label,
+  reflectivity,
+  diameterMm,
+  unitSystem,
+  labels,
+}: {
+  finishKey: string;
+  label: string;
+  reflectivity: number;
+  diameterMm: number;
+  unitSystem: UnitSystem;
+  labels: Record<string, string>;
+}) {
   const palette: Record<string, { core: string; edge: string; shine: string }> = {
     enhancedCopper: { core: "#b96830", edge: "#5f2f1f", shine: "#ffd09a" },
     protectedGold: { core: "#d4a21f", edge: "#76530d", shine: "#fff0a5" },
@@ -263,12 +279,15 @@ export function MirrorFinishPreview({ finishKey, label, reflectivity, labels }: 
         </defs>
         <rect width="220" height="130" fill="transparent" />
         <g transform="translate(0 2)">
-          <circle cx="110" cy="58" r="43" fill={`url(#${gradientId})`} stroke="var(--line)" strokeWidth="3" />
-          <circle cx="110" cy="58" r="31" fill="none" stroke="rgba(255,255,255,.5)" strokeWidth="1.4" />
+          <circle cx="110" cy="56" r="40" fill={`url(#${gradientId})`} stroke="var(--line)" strokeWidth="3" />
+          <circle cx="110" cy="56" r="29" fill="none" stroke="rgba(255,255,255,.5)" strokeWidth="1.4" />
           <ellipse cx="94" cy="40" rx="20" ry="8" fill="rgba(255,255,255,.42)" transform="rotate(-18 94 40)" />
         </g>
         <path d="M28 58 H70 M150 58 H194" fill="none" stroke="var(--beam)" strokeWidth="2" strokeLinecap="round" />
-        <text x="110" y="116" fill="var(--muted)" fontSize="11" textAnchor="middle">{label}</text>
+        <text x="110" y="112" fill="var(--muted)" fontSize="10.5" textAnchor="middle">{label}</text>
+        <text x="110" y="126" fill="var(--ink)" fontSize="10.5" fontWeight="900" textAnchor="middle">
+          {formatLength(diameterMm, unitSystem, 2)}
+        </text>
       </svg>
     </div>
   );
@@ -276,15 +295,17 @@ export function MirrorFinishPreview({ finishKey, label, reflectivity, labels }: 
 
 export function ExpanderGraph({ result, labels, unitSystem, onExpand }: Pick<GraphProps, "result" | "labels" | "unitSystem" | "onExpand">) {
   const open = onExpand ? () => onExpand("expander") : undefined;
-  const inHalf = clamp(result.sourceBeam * 6, 12, 46);
-  const outHalf = clamp(result.expandedBeam * 4, 14, 62);
+  const pxPerMm = Math.min(118 / Math.max(result.sourceBeam, result.expandedBeam, 1), 11);
+  const inHalf = clamp((result.sourceBeam * pxPerMm) / 2, 5, 54);
+  const outHalf = clamp((result.expandedBeam * pxPerMm) / 2, 5, 66);
   return (
     <div className="technical-preview expander-preview clickable-graph-hero" role={open ? "button" : undefined} tabIndex={open ? 0 : undefined} onClick={open} onKeyDown={(event) => graphKeydown(event, open)}>
       <div className="preview-head"><span>{labels.expanderGraphTitle}</span><strong>{formatCompact(result.expanderMultiplier, 2)}x</strong></div>
       <svg viewBox="0 0 520 170" role="img" aria-label={labels.expanderGraphTitle}>
         <rect width="520" height="170" fill="transparent" />
-        <path d={`M32 ${85 - inHalf} L178 ${85 - inHalf} L332 ${85 - outHalf} L488 ${85 - outHalf}`} fill="none" stroke="var(--beam)" strokeWidth="2" />
-        <path d={`M32 ${85 + inHalf} L178 ${85 + inHalf} L332 ${85 + outHalf} L488 ${85 + outHalf}`} fill="none" stroke="var(--beam)" strokeWidth="2" />
+        <path d={`M32 ${85 - inHalf} L178 ${85 - inHalf} L332 ${85 - outHalf} L488 ${85 - outHalf}`} fill="none" stroke="var(--beam)" strokeWidth="1.7" />
+        <path d={`M32 ${85 + inHalf} L178 ${85 + inHalf} L332 ${85 + outHalf} L488 ${85 + outHalf}`} fill="none" stroke="var(--beam)" strokeWidth="1.7" />
+        <line x1="32" x2="488" y1="85" y2="85" stroke="var(--axis)" strokeDasharray="5 7" />
         <rect x="178" y="40" width="44" height="90" rx="8" fill="color-mix(in srgb, var(--primary) 20%, var(--panel-solid))" stroke="var(--primary)" />
         <rect x="288" y="28" width="44" height="114" rx="8" fill="color-mix(in srgb, var(--green) 20%, var(--panel-solid))" stroke="var(--green)" />
         <text x="32" y="24" fill="var(--muted)" fontSize="11">{labels.sourceBeam}: {formatLength(result.sourceBeam, unitSystem, 2)}</text>
@@ -300,20 +321,31 @@ export function OpticalPathGraph({ result, labels, unitSystem, onExpand, expande
   const open = onExpand ? () => onExpand("optical") : undefined;
   const selected = result.opticalStages.find((stage) => stage.id === selectedId) || result.opticalStages[0];
   function pointFor(stageId: string) {
-    if (stageId === "source") return { x: 704, y: 82 };
+    if (stageId === "source") return { x: 790, y: 84 };
     if (stageId === "combiner") {
-      if (result.beamCombinerPosition === "nearSource") return { x: 618, y: 82 };
-      if (result.beamCombinerPosition === "beforeFirstMirror") return { x: 378, y: 82 };
-      return { x: 160, y: 64 };
+      if (result.beamCombinerPosition === "nearSource") return { x: 660, y: 84 };
+      if (result.beamCombinerPosition === "beforeFirstMirror") return { x: 380, y: 84 };
+      return { x: 142, y: 84 };
     }
-    if (stageId === "mirror-1") return { x: 126, y: 82 };
-    if (stageId === "mirror-2") return { x: 126, y: 205 };
-    if (stageId === "mirror-3") return { x: 590, y: 205 };
-    if (stageId === "lens") return { x: 590, y: 254 };
-    if (stageId === "surface") return { x: 590, y: 292 };
-    return { x: 590, y: 205 };
+    if (stageId === "mirror-1") return { x: 118, y: 84 };
+    if (stageId === "mirror-2") return { x: 118, y: 282 };
+    if (stageId === "mirror-3") return { x: 646, y: 282 };
+    if (stageId === "lens") return { x: 646, y: 392 };
+    if (stageId === "surface") return { x: 646, y: 492 };
+    return { x: 646, y: 282 };
+  }
+  function labelFor(stageId: string, x: number, y: number) {
+    if (stageId === "source") return { x: x - 4, y: y - 34, anchor: "end" as const };
+    if (stageId === "combiner") return { x, y: y - 30, anchor: "middle" as const };
+    if (stageId === "mirror-1") return { x, y: y - 38, anchor: "middle" as const };
+    if (stageId === "mirror-2") return { x, y: y + 48, anchor: "middle" as const };
+    if (stageId === "mirror-3") return { x: x + 54, y: y - 30, anchor: "start" as const };
+    if (stageId === "lens") return { x: x + 54, y: y + 2, anchor: "start" as const };
+    if (stageId === "surface") return { x: x + 54, y: y + 2, anchor: "start" as const };
+    return { x, y: y + 44, anchor: "middle" as const };
   }
   const points = result.opticalStages.map((stage) => ({ stage, ...pointFor(stage.id) }));
+  const beamStroke = (beamMm: number) => clamp(beamMm * 0.6, 2.2, 11.5);
   return (
     <div className={`graph-panel optical-path-panel ${expanded ? "expanded" : ""}`}>
       <div className="graph-head">
@@ -322,16 +354,34 @@ export function OpticalPathGraph({ result, labels, unitSystem, onExpand, expande
           <p>{labels.assumptionsTitle}</p>
         </div>
       </div>
-      <svg className="graph optical-path-graph" viewBox="0 0 820 320" role="img" aria-label={labels.fullOpticalPathTitle} onClick={open}>
-        <rect width="820" height="320" fill="transparent" />
-        <g opacity="0.72">
-          <rect x="408" y="56" width="330" height="34" rx="17" fill="none" stroke="var(--axis)" strokeWidth="1.4" />
-          <rect x="730" y="62" width="34" height="22" rx="4" fill="none" stroke="var(--axis)" strokeWidth="1.2" />
-          <path d="M438 82h264" fill="none" stroke="var(--axis)" strokeWidth="1" strokeDasharray="6 7" />
-          <path d="M520 58c18 18 18 44 0 62" fill="none" stroke="var(--axis)" strokeWidth="1" />
-        </g>
-        <polyline points={points.map((point) => `${point.x},${point.y}`).join(" ")} fill="none" stroke="var(--beam)" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
-        {points.map(({ stage, x, y }) => (
+      <svg className="graph optical-path-graph" viewBox="0 0 900 540" role="img" aria-label={labels.fullOpticalPathTitle} onClick={open}>
+        <rect width="900" height="540" fill="transparent" />
+        {result.expanderMultiplier > 1 ? (
+          <g opacity="0.9">
+            <rect x="500" y="58" width="68" height="52" rx="10" fill="color-mix(in srgb, var(--green) 14%, var(--panel-solid))" stroke="var(--green)" />
+            <path d="M514 72h40M514 96h40" stroke="var(--green)" strokeWidth="1.4" />
+            <text x="534" y="128" fill="var(--muted)" fontSize="9.5" textAnchor="middle">{result.expanderMultiplier}x</text>
+          </g>
+        ) : null}
+        {points.slice(0, -1).map((point, index) => {
+          const next = points[index + 1];
+          return (
+            <line
+              key={`${point.stage.id}-${next.stage.id}`}
+              x1={point.x}
+              y1={point.y}
+              x2={next.x}
+              y2={next.y}
+              stroke="var(--beam)"
+              strokeWidth={beamStroke(point.stage.beamMm)}
+              strokeLinecap="round"
+              opacity="0.82"
+            />
+          );
+        })}
+        {points.map(({ stage, x, y }) => {
+          const label = labelFor(stage.id, x, y);
+          return (
           <g key={stage.id} role="button" tabIndex={0} onClick={(event) => {
             event.stopPropagation();
             setSelectedId(stage.id);
@@ -339,19 +389,20 @@ export function OpticalPathGraph({ result, labels, unitSystem, onExpand, expande
             if (event.key === "Enter" || event.key === " ") setSelectedId(stage.id);
           }}>
             {stage.kind === "mirror" ? (
-              <rect x={x - 14} y={y - 14} width="28" height="28" rx="4" transform={`rotate(-38 ${x} ${y})`} fill={stage.warning ? "var(--amber)" : "var(--panel-solid)"} stroke="var(--primary)" strokeWidth="3" />
+              <circle cx={x} cy={y} r={stage.warning ? 10 : 8} fill={stage.warning ? "var(--amber)" : "var(--panel-solid)"} stroke="var(--primary)" strokeWidth="2.2" />
             ) : (
-              <circle cx={x} cy={y} r={selectedId === stage.id ? 22 : 17} fill={stage.warning ? "var(--amber)" : stage.kind === "surface" ? "var(--green)" : "var(--panel-solid)"} stroke={stage.kind === "source" ? "var(--beam)" : "var(--primary)"} strokeWidth="3" />
+              <circle cx={x} cy={y} r={selectedId === stage.id ? 18 : 14} fill={stage.warning ? "var(--amber)" : stage.kind === "surface" ? "var(--green)" : "var(--panel-solid)"} stroke={stage.kind === "source" ? "var(--beam)" : "var(--primary)"} strokeWidth="2.6" />
             )}
-            <circle cx={x} cy={y} r={stage.kind === "mirror" ? 17 : 1} fill="transparent">
+            <circle cx={x} cy={y} r={stage.kind === "mirror" ? 15 : 1} fill="transparent">
               <title>{labels[stage.labelKey]} · {labels.energyAfterStage}: {formatCompact(stage.energyWatt, 2)} W</title>
             </circle>
-            <text x={x} y={stage.kind === "surface" ? y - 28 : y + 44} fill="var(--ink)" fontSize="11" fontWeight="900" textAnchor="middle">{labels[stage.labelKey]}</text>
-            <text x={x} y={stage.kind === "surface" ? y - 13 : y + 60} fill="var(--muted)" fontSize="10" textAnchor="middle">
+            <text x={label.x} y={label.y} fill="var(--ink)" fontSize="10.5" fontWeight="900" textAnchor={label.anchor}>{labels[stage.labelKey]}</text>
+            <text x={label.x} y={label.y + 15} fill="var(--muted)" fontSize="9.5" textAnchor={label.anchor}>
               {formatCompact(stage.energyPercent, 1)}% · {formatLength(stage.beamMm, unitSystem, stage.kind === "surface" ? 4 : 2)}
             </text>
           </g>
-        ))}
+          );
+        })}
       </svg>
       {selected ? (
         <div className={`line-detail ${selected.warning ? "warn" : "ok"}`}>
@@ -497,24 +548,35 @@ export function FinishGraph({ values, result: baseResult, labels, unitSystem }: 
   );
 }
 
-export function FocalGraph({ values, labels, unitSystem }: GraphProps) {
+export function FocalGraph({ values, labels, unitSystem, expanded = false }: GraphProps) {
+  const [zoom, setZoom] = useState(1);
   const width = 800;
-  const height = 300;
-  const pad = { top: 28, right: 34, bottom: 52, left: 70 };
+  const height = expanded ? 390 : 330;
+  const pad = { top: 36, right: 40, bottom: 76, left: 74 };
   const graphW = width - pad.left - pad.right;
   const graphH = height - pad.top - pad.bottom;
   const toDisplayLength = (mm: number) => (unitSystem === "imperial" ? mmToInches(mm) : mm);
   const yUnit = lengthUnit(unitSystem);
-  const palette = ["var(--primary)", "var(--green)", "var(--beam)", "var(--violet)", "var(--amber)", "#6f8fd9"];
-  const focalPoints = FOCAL_LENGTHS.map((option) => ({
+  const palette = ["var(--primary)", "var(--green)", "var(--beam)"];
+  const presetFocals = FOCAL_LENGTHS.filter((option) => option.mm <= 228.6);
+  const sourceFocals = Number(values.focalLength) > 228.6
+    ? [...presetFocals, { mm: Number(values.focalLength) }]
+    : presetFocals;
+  const focalPoints = sourceFocals.map((option) => ({
     focal: option.mm,
     label: formatOptionLength(option.mm, unitSystem),
   }));
-  const series = LENS_DIAMETERS.map((diameter, index) => ({
+  const selectedLensDiameter = Number(values.lensDiameter);
+  const nearestLensDiameters = LENS_DIAMETERS
+    .slice()
+    .sort((a, b) => Math.abs(a.mm - selectedLensDiameter) - Math.abs(b.mm - selectedLensDiameter))
+    .slice(0, expanded ? 3 : 1)
+    .sort((a, b) => a.mm - b.mm);
+  const series = nearestLensDiameters.map((diameter, index) => ({
     diameter: diameter.mm,
     label: formatOptionLength(diameter.mm, unitSystem),
     color: palette[index % palette.length],
-    points: FOCAL_LENGTHS.map((option) => ({
+    points: sourceFocals.map((option) => ({
       focal: option.mm,
       label: formatOptionLength(option.mm, unitSystem),
       spot: calculateSpot({ ...values, focalLength: option.mm, lensDiameter: diameter.mm }).spot,
@@ -522,9 +584,9 @@ export function FocalGraph({ values, labels, unitSystem }: GraphProps) {
   }));
   const allPoints = series.flatMap((item) => item.points);
   const maxSpot = Math.max(...allPoints.map((point) => toDisplayLength(point.spot))) * 1.12;
+  const zoomedMaxSpot = maxSpot / zoom;
   const selectedFocal = Number(values.focalLength);
-  const selectedLensDiameter = Number(values.lensDiameter);
-  const yScale = (spot: number) => pad.top + (1 - spot / maxSpot) * graphH;
+  const yScale = (spot: number) => pad.top + (1 - clamp(spot / zoomedMaxSpot, 0, 1)) * graphH;
   const xScaleForFocal = (index: number) => pad.left + (index / Math.max(focalPoints.length - 1, 1)) * graphW;
 
   return (
@@ -535,10 +597,19 @@ export function FocalGraph({ values, labels, unitSystem }: GraphProps) {
           <p>{labels.graphFocalSub}</p>
         </div>
       </div>
-      <svg className="graph" viewBox={`0 0 ${width} ${height}`} role="img" aria-label={labels.graphFocalTitle}>
+      <svg
+        className="graph"
+        viewBox={`0 0 ${width} ${height}`}
+        role="img"
+        aria-label={labels.graphFocalTitle}
+        onWheel={expanded ? (event) => {
+          event.preventDefault();
+          setZoom((current) => clamp(current + (event.deltaY < 0 ? 0.18 : -0.18), 0.75, 3.4));
+        } : undefined}
+      >
         {[0, 0.5, 1].map((ratio) => {
           const y = pad.top + (1 - ratio) * graphH;
-          const spot = maxSpot * ratio;
+          const spot = zoomedMaxSpot * ratio;
           return (
             <g key={ratio}>
               <line x1={pad.left} x2={pad.left + graphW} y1={y} y2={y} stroke="var(--grid)" />
@@ -561,12 +632,21 @@ export function FocalGraph({ values, labels, unitSystem }: GraphProps) {
             />
           );
         })}
-        {series.map((item) => {
+        {series.map((item, seriesIndex) => {
           const selectedSeries = Math.abs(item.diameter - selectedLensDiameter) < 0.02;
           return item.points.map((point, index) => {
             const selected = selectedSeries && Math.abs(point.focal - selectedFocal) < 0.02;
             const x = xScaleForFocal(index);
             const y = yScale(toDisplayLength(point.spot));
+            const showValue = selected || (selectedSeries && (expanded ? index % 2 === 0 : index === 0 || index === item.points.length - 1));
+            const labelX = expanded
+              ? clamp(x + (seriesIndex - (series.length - 1) / 2) * 6, pad.left + 8, pad.left + graphW - 8)
+              : x;
+            const labelY = expanded
+              ? seriesIndex % 2 === 0
+                ? Math.max(pad.top + 9, y - 10 - Math.floor(seriesIndex / 2) * 10)
+                : Math.min(pad.top + graphH - 4, y + 16 + Math.floor(seriesIndex / 2) * 10)
+              : Math.max(pad.top + 8, y - 9);
             return (
               <g key={`${item.diameter}-${point.focal}`} opacity={selectedSeries ? 1 : 0.64}>
                 <circle
@@ -577,9 +657,11 @@ export function FocalGraph({ values, labels, unitSystem }: GraphProps) {
                 >
                   <title>{item.label} / {point.label}: {formatLength(point.spot, unitSystem, 5)}</title>
                 </circle>
-                <text x={x + 7} y={y - 4} fill={selected ? "var(--ink)" : item.color} fontSize="7.2" fontWeight={selected ? 900 : 700}>
-                  {formatNumber(toDisplayLength(point.spot), 4)}
-                </text>
+                {showValue ? (
+                  <text x={labelX} y={Math.max(pad.top + 8, labelY - 4)} fill={selected ? "var(--ink)" : item.color} fontSize={expanded ? "5.4" : "6"} fontWeight={selected ? 800 : 600} textAnchor="middle">
+                    {formatNumber(toDisplayLength(point.spot), 4)}
+                  </text>
+                ) : null}
               </g>
             );
           });
@@ -589,18 +671,18 @@ export function FocalGraph({ values, labels, unitSystem }: GraphProps) {
           return (
             <g key={point.focal}>
               {index % 2 === 0 || selected ? (
-                <text x={xScaleForFocal(index)} y={height - 30} fill="var(--axis)" fontSize="10" textAnchor="middle">{point.label}</text>
+                <text x={xScaleForFocal(index)} y={height - 48} fill="var(--axis)" fontSize="10" textAnchor="middle">{point.label}</text>
               ) : null}
             </g>
           );
         })}
         {series.map((item, index) => (
-          <g key={`${item.diameter}-legend`} transform={`translate(${pad.left + index * 112} ${height - 16})`}>
+          <g key={`${item.diameter}-legend`} transform={`translate(${pad.left + index * 112} ${height - 24})`}>
             <circle cx="0" cy="0" r="4" fill={item.color} opacity={Math.abs(item.diameter - selectedLensDiameter) < 0.02 ? 1 : 0.58} />
             <text x="9" y="4" fill="var(--ink)" fontSize="10">{item.label}</text>
           </g>
         ))}
-        <text x={pad.left + graphW / 2} y={height - 4} fill="var(--ink)" fontSize="12" textAnchor="middle">{labels.focalLength}</text>
+        <text x={pad.left + graphW / 2} y={height - 8} fill="var(--ink)" fontSize="12" textAnchor="middle">{labels.focalLength}</text>
         <text x="17" y={pad.top + graphH / 2} fill="var(--ink)" fontSize="12" textAnchor="middle" transform={`rotate(-90 17 ${pad.top + graphH / 2})`}>{yUnit}</text>
       </svg>
     </div>

@@ -1,0 +1,118 @@
+import type { KerfCalibrationMode, KerfMaterialPreset, KerfOperation, KerfQualityGoal, OpticalProfile } from "@/types";
+
+export const DEFAULT_OPTICAL_PROFILE: OpticalProfile = {
+  id: "default-50-8-0120",
+  profileName: "Default 50.8 mm lens / 0.120 mm spot",
+  wavelengthUm: 10.6,
+  lensFocalLengthMm: 50.8,
+  measuredSpotDiameterUm: 120,
+  measuredSpotDiameterMm: 0.12,
+  waistRadiusMm: 0.06,
+  rayleighRangeMm: 1.067,
+  depthOfFocusMm: 2.134,
+  confocalParameterMm: 2.134,
+  m2: 1,
+};
+
+export const KERF_MATERIALS: KerfMaterialPreset[] = [
+  {
+    id: "pmma",
+    labelKey: "materialPmma",
+    family: "cast_acrylic",
+    subtypes: ["cast_acrylic", "xt_acrylic", "mirror_acrylic"],
+    thicknessesMm: [2, 3, 5, 6, 8, 10],
+    safetyLevel: "warn",
+  },
+  {
+    id: "birch-plywood",
+    labelKey: "materialBirchPlywood",
+    family: "birch_plywood",
+    subtypes: ["birch_plywood"],
+    thicknessesMm: [3, 5, 8],
+    safetyLevel: "warn",
+  },
+  {
+    id: "ilomba-plywood",
+    labelKey: "materialIlombaPlywood",
+    family: "ilomba_plywood",
+    subtypes: ["ilomba_plywood"],
+    thicknessesMm: [4],
+    safetyLevel: "warn",
+  },
+  {
+    id: "mdf",
+    labelKey: "materialMdf",
+    family: "mdf",
+    subtypes: ["nude_mdf", "white_mdf", "black_mdf", "painted_mdf", "printed_mdf"],
+    thicknessesMm: [3, 4, 5, 8, 9],
+    safetyLevel: "warn",
+  },
+  {
+    id: "paper",
+    labelKey: "materialPaper",
+    family: "paper_cardstock",
+    subtypes: ["paper_cardstock"],
+    thicknessesMm: [0.2, 0.5, 1],
+    safetyLevel: "ok",
+  },
+  {
+    id: "leather",
+    labelKey: "materialLeather",
+    family: "leather",
+    subtypes: ["leather"],
+    thicknessesMm: [1, 2, 3],
+    safetyLevel: "warn",
+  },
+  {
+    id: "fabric",
+    labelKey: "materialFabric",
+    family: "fabric",
+    subtypes: ["fabric", "nonwoven"],
+    thicknessesMm: [0.3, 0.8, 1.5],
+    safetyLevel: "warn",
+  },
+  {
+    id: "unknown-plastic",
+    labelKey: "materialUnknownPlastic",
+    family: "unknown_plastic",
+    subtypes: ["unknown_plastic"],
+    thicknessesMm: [3],
+    safetyLevel: "blocked",
+  },
+];
+
+export const KERF_OPERATIONS: KerfOperation[] = [
+  "cut_through",
+  "kiss_cut",
+  "score",
+  "engrave",
+  "photo_engrave",
+  "inlay_precision_fit",
+];
+
+export const KERF_QUALITY_GOALS: KerfQualityGoal[] = [
+  "clean_top_edge",
+  "clean_bottom_exit",
+  "minimum_taper",
+  "minimum_char",
+  "minimum_melting",
+  "polished_acrylic_edge",
+  "best_dimensional_accuracy",
+  "press_fit_accuracy",
+  "fast_production",
+  "safe_mirror_backing",
+];
+
+export const KERF_CALIBRATION_MODES: KerfCalibrationMode[] = [
+  "multi_line_strip",
+  "outside_square",
+  "inside_hole",
+  "slot_tab_fit",
+  "inlay_fit",
+  "focus_ladder",
+];
+
+export const KERF_STORAGE_KEYS = {
+  opticalProfiles: "pnevma.opticalProfiles.v1",
+  materialProfiles: "pnevma.kerf.materialProfiles.v1",
+} as const;

@@ -30,3 +30,14 @@ export function AxisIcon() {
     </svg>
   );
 }
+
+export function KerfIcon() {
+  return (
+    <svg viewBox="0 0 64 64" aria-hidden="true">
+      <rect x="10" y="34" width="44" height="16" rx="3" fill="rgba(102,163,255,.2)" stroke="#66a3ff" strokeWidth="3" />
+      <path d="M32 8c-9 13-9 26 0 39 9-13 9-26 0-39Z" fill="none" stroke="#ff6b6f" strokeWidth="4" strokeLinejoin="round" />
+      <path d="M16 42h32" stroke="#f5b45b" strokeWidth="3" strokeLinecap="round" />
+      <circle cx="32" cy="34" r="4" fill="#ffffff" />
+    </svg>
+  );
+}
