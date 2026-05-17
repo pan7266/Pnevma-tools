@@ -11,7 +11,7 @@ export async function calculateSpotFromApi(input: SpotInputs): Promise<SpotResul
     if (response.ok) {
       return (await response.json()) as SpotResult;
     }
-    if (response.status === 404 || response.status === 405) {
+    if (response.status === 404 || response.status === 405 || response.status === 501) {
       return calculateSpot(input);
     }
     const payload = (await response.json().catch(() => ({}))) as { errors?: string[] };

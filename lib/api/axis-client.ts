@@ -11,7 +11,7 @@ export async function calculateAxisFromApi(input: AxisInputs): Promise<AxisResul
     if (response.ok) {
       return (await response.json()) as AxisResult;
     }
-    if (response.status === 404 || response.status === 405) {
+    if (response.status === 404 || response.status === 405 || response.status === 501) {
       return calculateAxis(input);
     }
     const payload = (await response.json().catch(() => ({}))) as { errors?: string[] };
