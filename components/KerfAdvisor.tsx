@@ -116,6 +116,99 @@ function BeamMaterialGraph({ result, thicknessMm, labels }: { result: KerfAdviso
   );
 }
 
+function RayleighRangeGraph({ profile, labels }: { profile: OpticalProfile; labels: Record<string, string> }) {
+  const width = 760;
+  const height = 170;
+  const centerX = width / 2;
+  const axisY = 88;
+  const zR = Math.max(profile.rayleighRangeMm, 0.001);
+  const confocal = Math.max(profile.confocalParameterMm || zR * 2, zR * 2);
+  const w0 = Math.max(profile.waistRadiusMm, profile.measuredSpotDiameterMm / 2, 0.0001);
+  const scale = 118 / Math.max(confocal, 0.1);
+  const leftZR = centerX - zR * scale;
+  const rightZR = centerX + zR * scale;
+  const waist = clamp(w0 * 1200, 3, 18);
+  return (
+    <div className="graph-panel kerf-rayleigh-graph">
+      <div className="graph-head">
+        <div>
+          <h2>{labels.rayleighGraphTitle}</h2>
+          <p>{labels.opticalProfileExplain}</p>
+        </div>
+      </div>
+      <svg className="graph" viewBox={`0 0 ${width} ${height}`} role="img" aria-label={labels.rayleighGraphTitle}>
+        <rect width={width} height={height} fill="transparent" />
+        <line x1="84" x2={width - 84} y1={axisY} y2={axisY} stroke="var(--axis)" strokeDasharray="5 7" />
+        <path d={`M84 ${axisY - 44} C${leftZR} ${axisY - 24} ${centerX - waist} ${axisY - waist} ${centerX} ${axisY - waist} C${centerX + waist} ${axisY - waist} ${rightZR} ${axisY - 24} ${width - 84} ${axisY - 44}`} fill="none" stroke="var(--beam)" strokeWidth="1.7" />
+        <path d={`M84 ${axisY + 44} C${leftZR} ${axisY + 24} ${centerX - waist} ${axisY + waist} ${centerX} ${axisY + waist} C${centerX + waist} ${axisY + waist} ${rightZR} ${axisY + 24} ${width - 84} ${axisY + 44}`} fill="none" stroke="var(--beam)" strokeWidth="1.7" />
+        <line x1={centerX} x2={centerX} y1="36" y2="140" stroke="var(--green)" strokeWidth="1.4" />
+        <line x1={leftZR} x2={leftZR} y1="48" y2="128" stroke="var(--primary)" strokeDasharray="5 6" />
+        <line x1={rightZR} x2={rightZR} y1="48" y2="128" stroke="var(--primary)" strokeDasharray="5 6" />
+        <text x={centerX} y="30" fill="var(--ink)" fontSize="12" fontWeight="900" textAnchor="middle">waist {profile.measuredSpotDiameterUm.toFixed(1)} µm</text>
+        <text x={leftZR} y="148" fill="var(--muted)" fontSize="11" textAnchor="middle">-zR {zR.toFixed(4)} mm</text>
+        <text x={rightZR} y="148" fill="var(--muted)" fontSize="11" textAnchor="middle">+zR {zR.toFixed(4)} mm</text>
+      </svg>
+    </div>
+  );
+}
+
+function CalibrationModeGraph({ mode, labels }: { mode: KerfCalibrationMode; labels: Record<string, string> }) {
+  const width = 520;
+  const height = 180;
+  const title = labels[mode] || mode;
+  return (
+    <div className="graph-panel kerf-calibration-graph">
+      <div className="graph-head">
+        <div>
+          <h2>{labels.calibrationDiagramTitle}</h2>
+          <p>{labels.helpCalibrationMode}</p>
+        </div>
+      </div>
+      <svg className="graph" viewBox={`0 0 ${width} ${height}`} role="img" aria-label={title}>
+        <rect width={width} height={height} fill="transparent" />
+        <text x="24" y="28" fill="var(--ink)" fontSize="14" fontWeight="900">{title}</text>
+        {mode === "multi_line_strip" ? Array.from({ length: 7 }, (_, index) => (
+          <line key={index} x1={110 + index * 32} x2={110 + index * 32} y1="50" y2="142" stroke={index % 2 ? "var(--beam)" : "var(--primary)"} strokeWidth="2" />
+        )) : null}
+        {mode === "outside_square" ? <rect x="160" y="48" width="150" height="90" fill="none" stroke="var(--beam)" strokeWidth="3" /> : null}
+        {mode === "inside_hole" ? <g><rect x="145" y="44" width="170" height="98" fill="none" stroke="var(--line)" /><circle cx="230" cy="93" r="38" fill="none" stroke="var(--beam)" strokeWidth="3" /></g> : null}
+        {mode === "slot_tab_fit" ? <g><rect x="110" y="62" width="120" height="54" fill="none" stroke="var(--primary)" strokeWidth="3" /><rect x="280" y="62" width="42" height="54" fill="color-mix(in srgb, var(--green) 22%, transparent)" stroke="var(--green)" strokeWidth="3" /></g> : null}
+        {mode === "inlay_fit" ? <g><path d="M168 122v-48h48v-26h72v26h48v48z" fill="none" stroke="var(--beam)" strokeWidth="3" /><path d="M210 113v-32h36v-18h48v18h36v32z" fill="none" stroke="var(--green)" strokeWidth="2" /></g> : null}
+        {mode === "focus_ladder" ? [0, 15, 30, 50, 70].map((percent, index) => (
+          <g key={percent}>
+            <rect x={98 + index * 70} y={58} width="42" height={74} fill="color-mix(in srgb, var(--primary) 8%, transparent)" stroke="var(--line)" />
+            <line x1={98 + index * 70} x2={140 + index * 70} y1={58 + (percent / 100) * 74} y2={58 + (percent / 100) * 74} stroke="var(--beam)" strokeWidth="2" />
+            <text x={119 + index * 70} y="150" fill="var(--muted)" fontSize="10" textAnchor="middle">{percent}%</text>
+          </g>
+        )) : null}
+      </svg>
+    </div>
+  );
+}
+
+function ThermalSelectionPanel({ operation, qualityGoal, labels }: { operation: KerfOperation; qualityGoal: KerfQualityGoal; labels: Record<string, string> }) {
+  return (
+    <article className="mini-panel thermal-selection-panel">
+      <h2>{labels.thermalSelectionTitle}</h2>
+      <p className="small"><strong>{labels.operation}:</strong> {labels[operation]} - {labels.helpOperation}</p>
+      <p className="small"><strong>{labels.qualityGoal}:</strong> {labels[qualityGoal]} - {labels.helpQualityGoal}</p>
+      <svg viewBox="0 0 520 92" role="img" aria-label={labels.thermalSelectionTitle}>
+        <rect x="28" y="38" width="360" height="16" rx="8" fill="url(#kerfHeatGradient)" />
+        <defs>
+          <linearGradient id="kerfHeatGradient" x1="0" x2="1">
+            <stop offset="0" stopColor="var(--green)" />
+            <stop offset="0.55" stopColor="var(--amber)" />
+            <stop offset="1" stopColor="var(--beam)" />
+          </linearGradient>
+        </defs>
+        <text x="28" y="74" fill="var(--muted)" fontSize="11">{labels.clean_top_edge}</text>
+        <text x="388" y="74" fill="var(--muted)" fontSize="11" textAnchor="end">{labels.clean_bottom_exit}</text>
+        <circle cx={qualityGoal === "clean_bottom_exit" ? 330 : qualityGoal === "fast_production" ? 360 : qualityGoal === "minimum_taper" ? 220 : 120} cy="46" r="8" fill="var(--ink)" />
+      </svg>
+    </article>
+  );
+}
+
 export function KerfAdvisor() {
   const { lang, unitSystem } = useAppSettings();
   const labels = useMemo(() => getLocale(lang).kerf, [lang]);
@@ -171,7 +264,14 @@ export function KerfAdvisor() {
     },
   };
   const result = useMemo(() => calculateKerfAdvisor(inputs), [inputs]);
-  const steps = [labels.stepOptical, labels.stepMaterial, labels.stepOperation, labels.stepResult, labels.stepCalibration, labels.stepExport];
+  const steps = [
+    { key: "optical", label: labels.stepOptical },
+    { key: "material", label: labels.stepMaterial },
+    { key: "operation", label: labels.stepOperation },
+    { key: "calibration", label: labels.stepCalibration },
+    { key: "export", label: labels.stepExport },
+  ] as const;
+  const activeStep = steps[step]?.key || "optical";
   const thicknessStep = thicknessStepFor(thicknessMm);
   const help = (key: string, fallback: string) => labels[key] || fallback;
 
@@ -239,16 +339,16 @@ export function KerfAdvisor() {
 
       <section className="panel panel-pad kerf-wizard">
         <nav className="wizard-steps" aria-label={labels.title}>
-          {steps.map((name, index) => (
-            <button key={name} className={`wizard-step ${step === index ? "active" : ""}`} type="button" onClick={() => setStep(index)}>
-              <span>{index + 1}</span>{name}
+          {steps.map((item, index) => (
+            <button key={item.key} className={`wizard-step ${step === index ? "active" : ""}`} type="button" onClick={() => setStep(index)}>
+              <span>{index + 1}</span>{item.label}
             </button>
           ))}
         </nav>
 
         <div className="kerf-grid">
           <aside className="stack">
-            {step === 0 ? (
+            {activeStep === "optical" ? (
               <section className="mini-panel">
                 <h2>{labels.opticalProfile}</h2>
                 <label>
@@ -261,10 +361,12 @@ export function KerfAdvisor() {
                 <div className="kv"><span>{labels.focusDepth}</span><span>{formatLength(selectedProfile.lensFocalLengthMm, unitSystem, 2)}</span></div>
                 <div className="kv"><span>{labels.measuredKerf}</span><span>{formatLength(selectedProfile.measuredSpotDiameterMm, unitSystem, 4)}</span></div>
                 <div className="kv"><span>Rayleigh</span><span>{formatLength(selectedProfile.rayleighRangeMm, unitSystem, 4)}</span></div>
+                <p className="small">{labels.opticalProfileExplain}</p>
+                <p className="small">{labels.measuredKerfExplain}</p>
               </section>
             ) : null}
 
-            {step === 1 ? (
+            {activeStep === "material" ? (
               <section className="mini-panel">
                 <h2>{labels.materialPreset}</h2>
                 <label>
@@ -290,7 +392,7 @@ export function KerfAdvisor() {
               </section>
             ) : null}
 
-            {step === 2 ? (
+            {activeStep === "operation" ? (
               <section className="mini-panel">
                 <h2>{labels.operation}</h2>
                 <label>
@@ -320,10 +422,11 @@ export function KerfAdvisor() {
                     </select>
                   </label>
                 </div>
+                <ThermalSelectionPanel operation={operation} qualityGoal={qualityGoal} labels={labels} />
               </section>
             ) : null}
 
-            {step === 4 ? (
+            {activeStep === "calibration" ? (
               <section className="mini-panel">
                 <h2>{labels.calibrationMode}</h2>
                 <label>
@@ -342,10 +445,11 @@ export function KerfAdvisor() {
                   <label><InfoLabel label={`${labels.measuredWidth} (mm)`} body={help("helpMeasuredWidth", labels.calibrationTest)} onOpen={setInfoModal} /><input type="number" step="0.01" value={measuredWidth} onChange={(event) => setMeasuredWidth(event.target.value)} /></label>
                   <label><InfoLabel label={labels.cutLines} body={help("helpCutLines", labels.calibrationTest)} onOpen={setInfoModal} /><input type="number" step="1" value={cutLines} onChange={(event) => setCutLines(event.target.value)} /></label>
                 </div>
+                <CalibrationModeGraph mode={calibrationMode} labels={labels} />
               </section>
             ) : null}
 
-            {step === 5 ? (
+            {activeStep === "export" ? (
               <section className="mini-panel">
                 <h2>{labels.savedProfiles}</h2>
                 <div className="button-row">
@@ -369,6 +473,12 @@ export function KerfAdvisor() {
               <MetricCard label={labels.focusRange} value={`${formatNumber(result.acceptableFocusMinMm, 2)} - ${formatNumber(result.acceptableFocusMaxMm, 2)} mm`} sub={`${formatNumber(result.acceptableFocusMinPercent, 1)}% - ${formatNumber(result.acceptableFocusMaxPercent, 1)}%`} />
               <MetricCard label={labels.opticalTaper} value={labels[result.opticalTaperTendency]} sub={`${labels.symmetryError}: ${formatNumber(result.opticalSymmetryError * 100, 1)}%`} tone={result.opticalTaperTendency === "high" ? "warn filled" : "ok"} />
               <MetricCard label={labels.confidence} value={`${labels[result.confidence]} ${formatNumber(result.confidenceScore, 0)}/100`} sub={result.confidenceExplanation} />
+            </div>
+            {activeStep === "optical" ? <RayleighRangeGraph profile={selectedProfile} labels={labels} /> : null}
+            <div className="panels kerf-explain-grid">
+              <article className="mini-panel"><h2>{labels.focusDepth}</h2><p className="small">{labels.focusDepthExplain}</p></article>
+              <article className="mini-panel"><h2>{labels.opticalTaper}</h2><p className="small">{labels.opticalTaperExplain}</p></article>
+              <article className="mini-panel"><h2>{labels.confidenceExplainTitle}</h2><p className="small">{labels.confidenceExplainBody}</p></article>
             </div>
             <BeamMaterialGraph result={result} thicknessMm={thicknessMm} labels={labels} />
             <div className="panels kerf-panels">

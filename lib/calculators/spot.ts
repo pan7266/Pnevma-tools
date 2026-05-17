@@ -227,6 +227,7 @@ export function calculateSpot(
 
   const spotAreaMm2 = Math.PI * Math.pow(Math.max(spot, 0.0001) / 2, 2);
   const powerDensityWPerMm2 = deliveredWatt / spotAreaMm2;
+  const spotTemperatureC = clamp(20 + Math.pow(Math.max(powerDensityWPerMm2, 0), 0.58) * 26, 20, 6500);
   const assumptions = [
     source.id === "manual" ? "assumptionManualSource" : "assumptionPresetSource",
     "assumptionMirrorAperture",
@@ -350,6 +351,7 @@ export function calculateSpot(
     atmosphereLostWatt,
     alignmentLostWatt,
     pulseEnergyMj,
+    spotTemperatureC,
     currentBestMa,
     hasAmp,
     ampValue,

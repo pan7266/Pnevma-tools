@@ -17,6 +17,8 @@ import { SOURCE_LIBRARY } from "@/lib/data/sources";
 import { EXPERIMENTAL_NOTICE, OWNER } from "@/lib/data/terms";
 import { AXIS_TEXT, LOCALES, SPOT_INFO, SPOT_TEXT } from "@/locales";
 
+export const dynamic = "force-static";
+
 export function GET() {
   return NextResponse.json({
     owner: OWNER,

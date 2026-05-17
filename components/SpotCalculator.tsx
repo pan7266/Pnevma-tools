@@ -56,6 +56,8 @@ const SPOT_FIELD_NAMES: Array<keyof SpotInputs> = [
   "beamCombinerTransmission",
   "beamCombinerDiameter",
 ];
+const MAX_PRESET_FOCAL_LENGTH_MM = 228.6;
+const DISPLAY_FOCAL_LENGTHS = FOCAL_LENGTHS.filter((option) => option.mm <= MAX_PRESET_FOCAL_LENGTH_MM);
 
 function inputPlaceholder(example: string) {
   return example;
@@ -145,6 +147,7 @@ export function SpotCalculator() {
   const displayLengthUnit = lengthUnit(unitSystem);
   const displayTemperatureUnit = temperatureUnit(unitSystem);
   const powerDensityUnit = unitSystem === "imperial" ? "W/in²" : "W/mm²";
+  const isCustomFocalLength = !DISPLAY_FOCAL_LENGTHS.some((option) => Math.abs(option.mm - Number(values.focalLength)) < 0.001);
   const sourceOptionLabel = useCallback(
     (source: SourcePreset) => `${source.brand} ${source.model} / ${source.ratedWatt} W / ${formatLength(source.beamMm, unitSystem, 2)}`,
     [unitSystem],
@@ -270,6 +273,14 @@ export function SpotCalculator() {
     updateSource(match?.id || "");
   }
 
+  function updateFocalPreset(value: string) {
+    if (value === "custom") {
+      updateField("focalLength", Number(values.focalLength) > MAX_PRESET_FOCAL_LENGTH_MM ? values.focalLength : MAX_PRESET_FOCAL_LENGTH_MM + 25.4);
+      return;
+    }
+    updateField("focalLength", Number(value));
+  }
+
   function openLampDetails() {
     const activeSourceId = matchedSourceId || values.sourceId;
     if (!activeSourceId && !result?.source) {
@@ -318,11 +329,11 @@ export function SpotCalculator() {
 
   function graphModalContent() {
     if (graphModal === "pulse") {
-      return <PulseHzGraph hz={Number(values.hz) || 1} selectedWatt={result?.selectedWatt || estimatedSelectedWatt} pulseEnergyMj={result?.pulseEnergyMj || previewPulseEnergy} labels={labels} expanded onHzChange={(hz) => updateField("hz", hz)} />;
+      return <PulseHzGraph hz={Number(values.hz) || 1} selectedWatt={result?.selectedWatt || estimatedSelectedWatt} pulseEnergyMj={result?.pulseEnergyMj || previewPulseEnergy} spotTemperatureC={result?.spotTemperatureC} labels={labels} expanded onHzChange={(hz) => updateField("hz", hz)} />;
     }
     if (!result) return null;
     if (graphModal === "path") return <PowerPathGraph result={result} labels={labels} expanded />;
-    if (graphModal === "beam") return <BeamPreview result={result} labels={labels} unitSystem={unitSystem} expanded onFocalLengthChange={(value) => updateField("focalLength", value)} />;
+    if (graphModal === "beam") return <BeamPreview result={result} labels={labels} unitSystem={unitSystem} expanded />;
     if (graphModal === "finish") return <FinishGraph values={values} result={result} labels={labels} lang={lang} unitSystem={unitSystem} />;
     if (graphModal === "focal") return <FocalGraph values={values} result={result} labels={labels} lang={lang} unitSystem={unitSystem} expanded />;
     if (graphModal === "source") return <BeamLibraryGraph values={values} result={result} labels={labels} lang={lang} unitSystem={unitSystem} />;
@@ -343,6 +354,27 @@ export function SpotCalculator() {
       optical: labels.fullOpticalPathTitle,
     };
     return graphModal ? titles[graphModal] : labels.expandGraph;
+  }
+
+  function renderSpotReadouts() {
+    if (!result) return null;
+    return (
+      <div className="readouts">
+        <MetricCard label={labels.spotDiameter} value={formatLength(result.spot, unitSystem, 4)} />
+        <MetricCard label={labels.sourceBeam} value={formatLength(result.sourceBeam, unitSystem, 2)} />
+        <MetricCard label={labels.effectiveBeam} value={formatLength(result.effectiveBeam, unitSystem, 2)} sub={`${formatLength(result.clearAperture, unitSystem, 2)} ${labels.lensLower} / ${formatLength(result.mirrorClearAperture, unitSystem, 2)} ${labels.mirrorLower}`} />
+        <MetricCard label={labels.expandedBeam} value={formatLength(result.expandedBeam, unitSystem, 2)} />
+        <MetricCard label={labels.selectedWatt} value={`${formatCompact(result.selectedWatt, 2)} W`} sub={labels[result.wattBasis]} />
+        <MetricCard label={labels.deliveredWatt} value={`${formatCompact(result.deliveredWatt, 2)} W`} />
+        <MetricCard label={labels.mirrorLoss} value={`${formatCompact(result.mirrorAbsorbedWatt, 2)} W`} />
+        <MetricCard label={labels.pathLoss} value={`${formatCompact(result.pathTransmission * 100, 1)}%`} />
+        <MetricCard label={labels.combinerEffect} value={`${formatCompact(result.beamCombinerLossWatt, 2)} W`} sub={`${formatCompact(result.beamCombinerTransmission * 100, 2)}%`} />
+        <MetricCard label={labels.powerDensity} value={`${formatCompact(unitSystem === "imperial" ? result.powerDensityWPerMm2 * 645.16 : result.powerDensityWPerMm2, 2)} ${powerDensityUnit}`} />
+        <MetricCard label={labels.spotTemperature} value={`${formatCompact(result.spotTemperatureC, 0)} °C`} sub={labels.estimatedSpotTemperature} tone="warn" />
+        <MetricCard label={labels.beamStability} value={labels[result.beamStability]} tone={result.beamStability === "stable" ? "ok" : result.beamStability === "unstable" ? "danger" : "warn"} />
+        <MetricCard label={labels.pulseEnergy} value={`${formatNumber(result.pulseEnergyMj, 3)} mJ`} />
+      </div>
+    );
   }
 
   return (
@@ -413,8 +445,6 @@ export function SpotCalculator() {
                 </label>
               </>
             ) : null}
-          </div>
-          <div className="spot-measurement-row">
             <label className={fieldInvalid("measuredWatt")}>
               <FieldLabel infoKey="measuredWatt" labels={labels} info={info} onOpen={setModal}>{labels.measuredWatt}</FieldLabel>
               <input type="number" min="0" step="0.1" placeholder={inputPlaceholder("130 W")} value={String(values.measuredWatt ?? "")} onChange={(event) => updateField("measuredWatt", event.target.value)} />
@@ -473,6 +503,7 @@ export function SpotCalculator() {
                   hz={Number(values.hz) || 1}
                   selectedWatt={result?.selectedWatt || estimatedSelectedWatt}
                   pulseEnergyMj={result?.pulseEnergyMj || previewPulseEnergy}
+                  spotTemperatureC={result?.spotTemperatureC}
                   labels={labels}
                   onHzChange={(hz) => updateField("hz", hz)}
                   onExpand={() => setGraphModal("pulse")}
@@ -493,11 +524,22 @@ export function SpotCalculator() {
               </label>
               <label className={fieldInvalid("focalLength")}>
                 <FieldLabel infoKey="focalLength" labels={labels} info={info} onOpen={setModal}>{labelWithUnit(labels.focalLength, displayLengthUnit)}</FieldLabel>
-                <select value={String(values.focalLength)} onChange={(event) => updateField("focalLength", Number(event.target.value))}>
-                  {FOCAL_LENGTHS.map((option) => (
+                <select value={isCustomFocalLength ? "custom" : String(values.focalLength)} onChange={(event) => updateFocalPreset(event.target.value)}>
+                  {DISPLAY_FOCAL_LENGTHS.map((option) => (
                     <option key={option.mm} value={option.mm}>{formatOptionLength(option.mm, unitSystem)}</option>
                   ))}
+                  <option value="custom">{labels.customFocalLength}</option>
                 </select>
+                {isCustomFocalLength ? (
+                  <input
+                    type="number"
+                    min={MAX_PRESET_FOCAL_LENGTH_MM}
+                    step="0.1"
+                    placeholder={inputPlaceholder(unitSystem === "imperial" ? "10 in" : "254 mm")}
+                    value={displayLengthValue(values.focalLength, unitSystem, 3)}
+                    onChange={(event) => updateField("focalLength", parseLengthValue(event.target.value, unitSystem))}
+                  />
+                ) : null}
               </label>
             </div>
             <div className="optic-split">
@@ -604,8 +646,8 @@ export function SpotCalculator() {
                     </option>
                   ))}
                 </select>
-                {result ? <span className="field-hint">{labels.alignmentImpact}: {formatCompact(result.alignmentLostWatt, 2)} W</span> : null}
               </label>
+              {result ? <div className="alignment-impact-pill">{labels.alignmentImpact}:<strong>{formatCompact(result.alignmentLostWatt, 2)} W</strong></div> : null}
             </div>
           </CollapsibleSection>
 
@@ -655,24 +697,34 @@ export function SpotCalculator() {
             </div>
           ) : (
             <>
-              <div className="panel visual-panel">
-                <PowerPathGraph result={result} labels={labels} onExpand={setGraphModal} />
-                <BeamPreview result={result} labels={labels} unitSystem={unitSystem} onExpand={setGraphModal} onFocalLengthChange={(value) => updateField("focalLength", value)} />
-                <OpticalPathGraph result={result} labels={labels} unitSystem={unitSystem} onExpand={setGraphModal} />
-              </div>
-              <div className="readouts">
-                <MetricCard label={labels.spotDiameter} value={formatLength(result.spot, unitSystem, 4)} />
-                <MetricCard label={labels.sourceBeam} value={formatLength(result.sourceBeam, unitSystem, 2)} />
-                <MetricCard label={labels.effectiveBeam} value={formatLength(result.effectiveBeam, unitSystem, 2)} sub={`${formatLength(result.clearAperture, unitSystem, 2)} ${labels.lensLower} / ${formatLength(result.mirrorClearAperture, unitSystem, 2)} ${labels.mirrorLower}`} />
-                <MetricCard label={labels.expandedBeam} value={formatLength(result.expandedBeam, unitSystem, 2)} />
-                <MetricCard label={labels.selectedWatt} value={`${formatCompact(result.selectedWatt, 2)} W`} sub={labels[result.wattBasis]} />
-                <MetricCard label={labels.deliveredWatt} value={`${formatCompact(result.deliveredWatt, 2)} W`} />
-                <MetricCard label={labels.mirrorLoss} value={`${formatCompact(result.mirrorAbsorbedWatt, 2)} W`} />
-                <MetricCard label={labels.pathLoss} value={`${formatCompact(result.pathTransmission * 100, 1)}%`} />
-                <MetricCard label={labels.combinerEffect} value={`${formatCompact(result.beamCombinerLossWatt, 2)} W`} sub={`${formatCompact(result.beamCombinerTransmission * 100, 2)}%`} />
-                <MetricCard label={labels.powerDensity} value={`${formatCompact(unitSystem === "imperial" ? result.powerDensityWPerMm2 * 645.16 : result.powerDensityWPerMm2, 2)} ${powerDensityUnit}`} />
-                <MetricCard label={labels.beamStability} value={labels[result.beamStability]} tone={result.beamStability === "stable" ? "ok" : result.beamStability === "unstable" ? "danger" : "warn"} />
-                <MetricCard label={labels.pulseEnergy} value={`${formatNumber(result.pulseEnergyMj, 3)} mJ`} />
+              <div className="graphs top-graphs">
+                <details className="graph-collapsible clickable-graph" open onClick={(event) => {
+                  if ((event.target as HTMLElement).closest("summary")) return;
+                  setGraphModal("path");
+                }}>
+                  <summary>
+                    <span>{labels.pathGraphTitle}</span>
+                  </summary>
+                  <PowerPathGraph result={result} labels={labels} onExpand={setGraphModal} />
+                </details>
+                <details className="graph-collapsible clickable-graph" open onClick={(event) => {
+                  if ((event.target as HTMLElement).closest("summary")) return;
+                  setGraphModal("beam");
+                }}>
+                  <summary>
+                    <span>{labels.beamPathTitle}</span>
+                  </summary>
+                  <BeamPreview result={result} labels={labels} unitSystem={unitSystem} onExpand={setGraphModal} />
+                </details>
+                <details className="graph-collapsible clickable-graph" open onClick={(event) => {
+                  if ((event.target as HTMLElement).closest("summary")) return;
+                  setGraphModal("optical");
+                }}>
+                  <summary>
+                    <span>{labels.fullOpticalPathTitle}</span>
+                  </summary>
+                  <OpticalPathGraph result={result} labels={labels} unitSystem={unitSystem} onExpand={setGraphModal} />
+                </details>
               </div>
               <div className="graphs">
                 <details className="graph-collapsible clickable-graph" open onClick={(event) => {
@@ -720,7 +772,13 @@ export function SpotCalculator() {
           )}
         </section>
 
-        <aside className="panel panel-pad stack side-notes">
+        <aside className="panel panel-pad stack readout-rail">
+          <h2>{labels.readouts}</h2>
+          {result ? renderSpotReadouts() : <p className="data-note">{labels.readyBody}</p>}
+        </aside>
+      </section>
+
+      <footer className="panel panel-pad stack side-notes spot-footer-notes">
           <h2>{labels.sourceCoverage}</h2>
           <p>{labels.sourceCoverageBody}</p>
           <p className="data-note">{labels.dataNotice}</p>
@@ -738,8 +796,7 @@ export function SpotCalculator() {
             <summary>{labels.formula}</summary>
             <p>{info.formula}</p>
           </details>
-        </aside>
-      </section>
+      </footer>
 
       {modal ? (
         <div className="modal-backdrop" role="dialog" aria-modal="true" onClick={() => setModal(null)}>

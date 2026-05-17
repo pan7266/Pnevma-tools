@@ -144,6 +144,7 @@ export interface SpotResult {
   atmosphereLostWatt: number;
   alignmentLostWatt: number;
   pulseEnergyMj: number;
+  spotTemperatureC: number;
   currentBestMa: number | null;
   hasAmp: boolean;
   ampValue: number;
