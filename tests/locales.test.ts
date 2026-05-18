@@ -62,6 +62,15 @@ const allowedSameValues = new Set([
 
 const allowedSamePaths = new Set([
   "common.appName",
+  "common.contact",
+  "common.contactName",
+  "common.contactRole",
+  "common.contactPhone",
+  "common.contactAddress",
+  "common.contactEmail",
+  "common.contactWebsite",
+  "common.contactEmailLabel",
+  "common.contactWebsiteLabel",
   "common.imperial",
   "spot.percentUnit",
   "spot.english",
@@ -83,6 +92,7 @@ const allowedSamePaths = new Set([
   "axis.controllerStatus",
   "axis.spotStatus",
   "kerf.material",
+  "kerf.source",
   "kerf.stepMaterial",
   "kerf.extraction",
 ]);

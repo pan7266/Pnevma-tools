@@ -22,15 +22,7 @@ npm install
 npm run dev
 ```
 
-Open the local URL printed by Next.js, usually `http://localhost:3000`.
-
-If port 3000 is busy:
-
-```powershell
-npm run dev -- --port 3001
-```
-
-The current development checks were run on `http://localhost:3001`.
+Open the local URL printed by Next.js, configured as `http://localhost:3001` because port 3000 is commonly occupied.
 
 ## Build
 
@@ -76,7 +68,8 @@ For current Next.js versions, static export is configured through `output: "expo
 - No GraphQL, database, authentication, Tailwind, shadcn/ui, browser Babel, UMD React scripts, iframe, or charting package is included.
 - CO2 lamp/source detail links now prefer official manufacturer pages, manuals, or datasheets where available, including RECI, SPT, EFR, LaserLife, Novanta SYNRAD, Coherent, and Luxinar sources.
 - The Spot calculator includes live calculation, sticky readouts, collapsible graph sections, optical-path visualization, focal-length presets up to 228.6 mm plus custom focal length input, and a rough spot-temperature estimate shown as a thermal index.
-- The Kerf Advisor imports the Spot optical profile, explains micrometres, measured spot/kerf, Rayleigh range, focus depth, taper tendency, confidence, and calibration workflows with inline SVG diagrams.
+- The Kerf Advisor imports the Spot optical profile, explains measured spot/kerf, Rayleigh range, focus depth, taper tendency, confidence, and calibration workflows with inline SVG diagrams.
+- Privacy, terms, and contact pages are available from the compact footer. Business contact email is `pan@pnevmagifts.gr`.
 
 ## Important Notice
 

@@ -48,6 +48,15 @@ function roundThickness(value: number): number {
   return Number((Math.round(safe / step) * step).toFixed(2));
 }
 
+function compactProfileSource(profileName: string): string {
+  const source = profileName.split("/")[0]?.trim() || profileName;
+  return source.length > 34 ? `${source.slice(0, 31)}...` : source;
+}
+
+function opticalProfileOptionLabel(profile: OpticalProfile, labels: Record<string, string>): string {
+  return `${labels.source} "${compactProfileSource(profile.profileName)}" | ${labels.lensFocalLength} ${formatNumber(profile.lensFocalLengthMm, 1)} mm | ${labels.measuredSpot} ${formatNumber(profile.measuredSpotDiameterMm, 3)}`;
+}
+
 function InfoLabel({
   label,
   body,
@@ -157,12 +166,13 @@ function CalibrationModeGraph({ mode, labels }: { mode: KerfCalibrationMode; lab
   const width = 520;
   const height = 180;
   const title = labels[mode] || mode;
+  const description = labels[`calibrationModeMeaning_${mode}`] || labels.helpCalibrationMode;
   return (
     <div className="graph-panel kerf-calibration-graph">
       <div className="graph-head">
         <div>
           <h2>{labels.calibrationDiagramTitle}</h2>
-          <p>{labels.helpCalibrationMode}</p>
+          <p>{description}</p>
         </div>
       </div>
       <svg className="graph" viewBox={`0 0 ${width} ${height}`} role="img" aria-label={title}>
@@ -188,11 +198,13 @@ function CalibrationModeGraph({ mode, labels }: { mode: KerfCalibrationMode; lab
 }
 
 function ThermalSelectionPanel({ operation, qualityGoal, labels }: { operation: KerfOperation; qualityGoal: KerfQualityGoal; labels: Record<string, string> }) {
+  const operationMeaning = labels[`operationMeaning_${operation}`] || labels.helpOperation;
+  const qualityGoalMeaning = labels[`qualityGoalMeaning_${qualityGoal}`] || labels.helpQualityGoal;
   return (
     <article className="mini-panel thermal-selection-panel">
       <h2>{labels.thermalSelectionTitle}</h2>
-      <p className="small"><strong>{labels.operation}:</strong> {labels[operation]} - {labels.helpOperation}</p>
-      <p className="small"><strong>{labels.qualityGoal}:</strong> {labels[qualityGoal]} - {labels.helpQualityGoal}</p>
+      <p className="small"><strong>{labels[operation]}:</strong> {operationMeaning}</p>
+      <p className="small"><strong>{labels[qualityGoal]}:</strong> {qualityGoalMeaning}</p>
       <svg viewBox="0 0 520 92" role="img" aria-label={labels.thermalSelectionTitle}>
         <rect x="28" y="38" width="360" height="16" rx="8" fill="url(#kerfHeatGradient)" />
         <defs>
@@ -357,12 +369,12 @@ export function KerfAdvisor() {
                 <label>
                   <InfoLabel label={labels.opticalProfile} body={help("helpOpticalProfile", labels.importProfile)} onOpen={setInfoModal} />
                   <select value={selectedProfileId} onChange={(event) => setSelectedProfileId(event.target.value)}>
-                    {profiles.map((profile) => <option key={profile.id} value={profile.id}>{profile.profileName}</option>)}
+                    {profiles.map((profile) => <option key={profile.id} value={profile.id}>{opticalProfileOptionLabel(profile, labels)}</option>)}
                   </select>
                   <span className="field-hint">{profiles.length ? labels.importProfile : labels.noProfile}</span>
                 </label>
-                <div className="kv"><span>{labels.focusDepth}</span><span>{formatLength(selectedProfile.lensFocalLengthMm, unitSystem, 2)}</span></div>
-                <div className="kv"><span>{labels.measuredKerf}</span><span>{formatLength(selectedProfile.measuredSpotDiameterMm, unitSystem, 4)}</span></div>
+                <div className="kv"><span>{labels.lensFocalLength}</span><span>{formatLength(selectedProfile.lensFocalLengthMm, unitSystem, 2)}</span></div>
+                <div className="kv"><span>{labels.measuredSpot}</span><span>{formatLength(selectedProfile.measuredSpotDiameterMm, unitSystem, 4)}</span></div>
                 <div className="kv"><span>{labels.rayleigh}</span><span>{formatLength(selectedProfile.rayleighRangeMm, unitSystem, 4)}</span></div>
                 <p className="small">{labels.opticalProfileExplain}</p>
                 <p className="small">{labels.measuredKerfExplain}</p>
@@ -437,6 +449,7 @@ export function KerfAdvisor() {
                   <select value={calibrationMode} onChange={(event) => setCalibrationMode(event.target.value as KerfCalibrationMode)}>
                     {KERF_CALIBRATION_MODES.map((item) => <option key={item} value={item}>{labels[item]}</option>)}
                   </select>
+                  <span className="field-hint">{labels[`calibrationModeMeaning_${calibrationMode}`] || labels.helpCalibrationMode}</span>
                 </label>
                 <div className="field-row compact-row">
                   <label><InfoLabel label={`${labels.topKerf} (mm)`} body={help("helpTopKerf", labels.measuredKerf)} onOpen={setInfoModal} /><input type="number" step="0.001" value={topKerf} onChange={(event) => setTopKerf(event.target.value)} /></label>
