@@ -1049,7 +1049,7 @@ details.graph-collapsible > summary::after {
   position: sticky;
   top: 66px;
   z-index: 31;
-  grid-template-columns: minmax(260px, 1.15fr) minmax(150px, 0.72fr) minmax(120px, 0.5fr) minmax(150px, 0.72fr);
+  grid-template-columns: minmax(260px, 1fr) minmax(300px, 1.1fr) minmax(150px, 0.7fr);
   align-items: stretch;
   background: var(--panel-solid);
 }
@@ -1080,6 +1080,10 @@ details.graph-collapsible > summary::after {
   grid-template-columns: minmax(108px, 0.55fr) minmax(250px, 1.35fr) repeat(5, minmax(88px, 0.5fr));
   gap: 8px;
   align-items: end;
+}
+
+.spot-source-row .mobile-pair {
+  grid-column: span 2;
 }
 
 .spot-measurement-row {
@@ -1245,7 +1249,7 @@ details.graph-collapsible > summary::after {
 }
 
 .motor-preset-row .mini-button {
-  align-self: start;
+  align-self: end;
   margin-top: 30px;
   min-height: 42px;
 }
@@ -1306,7 +1310,11 @@ details.graph-collapsible > summary::after {
 }
 
 .readout-rail .readouts {
-  grid-template-columns: 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.axis-status-readouts {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .spot-footer-notes {
@@ -1619,7 +1627,7 @@ th {
   }
 }
 
-.kerf-wizard {
+.kerf-workbench {
   margin-top: 0;
 }
 
@@ -1758,8 +1766,10 @@ th {
     height: 38px;
     border: 1px solid var(--line);
     border-radius: 999px;
+    padding: 0;
     background: var(--panel-solid);
     box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
+    cursor: pointer;
   }
 
   .mobile-menu-toggle span {
@@ -1861,6 +1871,49 @@ th {
 
   .alignment-inline-row {
     grid-template-columns: 1fr;
+  }
+
+  .spot-tool .layout > aside.panel:first-child {
+    order: 1;
+  }
+
+  .spot-tool .layout > .readout-rail {
+    order: 2;
+  }
+
+  .spot-tool .layout > section.stack {
+    order: 3;
+  }
+
+  .mobile-pair,
+  .compact-row,
+  .axis-interval-pair,
+  .motor-step-row,
+  .extractor-row,
+  .expander-control-row,
+  .readout-rail .readouts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .spot-source-row .mobile-pair {
+    grid-column: auto;
+  }
+
+  .axis-status-readouts {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .spot-tool .optic-split {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .spot-tool .technical-preview {
+    min-height: 96px;
+    padding: 7px;
+  }
+
+  .spot-tool .technical-preview svg {
+    max-height: 78px;
   }
 
   .axis-choice-row {

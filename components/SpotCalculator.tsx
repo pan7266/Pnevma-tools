@@ -136,7 +136,6 @@ export function SpotCalculator() {
   const info = useMemo(() => getLocale(lang).spotInfo, [lang]);
   const [values, setValues] = useState<SpotInputs>(spotDefaultValues as unknown as SpotInputs);
   const [storageReady, setStorageReady] = useState(false);
-  const [sourceQuery, setSourceQuery] = useState("");
   const [hasRun, setHasRun] = useState(false);
   const [result, setResult] = useState<SpotResult | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -152,21 +151,12 @@ export function SpotCalculator() {
     (source: SourcePreset) => `${source.brand} ${source.model} / ${source.ratedWatt} W / ${formatLength(source.beamMm, unitSystem, 2)}`,
     [unitSystem],
   );
-  const matchedSourceId = useMemo(() => {
-    if (values.sourceId) return values.sourceId;
-    const normalized = sourceQuery.trim().toLowerCase();
-    if (!normalized) return "";
-    return filteredSources.find((source) => {
-      const label = sourceOptionLabel(source).toLowerCase();
-      return label === normalized || label.includes(normalized) || `${source.brand} ${source.model}`.toLowerCase() === normalized;
-    })?.id || "";
-  }, [filteredSources, sourceOptionLabel, sourceQuery, values.sourceId]);
   const estimatedSelectedWatt = useMemo(() => {
-    const sourceRated = matchedSourceId ? getSource(matchedSourceId).ratedWatt : 0;
+    const sourceRated = values.sourceId ? getSource(values.sourceId).ratedWatt : 0;
     const base = Number(values.measuredWatt || values.manualRatedWatt || sourceRated || 0);
     const percent = Number(values.powerPercent || 0);
     return Number.isFinite(base) && Number.isFinite(percent) ? base * (percent / 100) : 0;
-  }, [matchedSourceId, values.manualRatedWatt, values.measuredWatt, values.powerPercent]);
+  }, [values.manualRatedWatt, values.measuredWatt, values.powerPercent, values.sourceId]);
   const previewCombinerTransmission = values.beamCombinerPosition === "none"
     ? 1
     : Math.min(Math.max(Number(values.beamCombinerTransmission || 100) / 100, 0), 1);
@@ -192,24 +182,14 @@ export function SpotCalculator() {
     window.localStorage.setItem(SPOT_STORAGE_KEY, JSON.stringify(values));
   }, [storageReady, values]);
 
-  useEffect(() => {
-    if (!values.sourceId) return;
-    const source = getSource(values.sourceId);
-    setSourceQuery(sourceOptionLabel(source));
-  }, [sourceOptionLabel, values.sourceId]);
-
   const runCalculation = useCallback(async () => {
     try {
       setError(null);
-      const calculationValues = matchedSourceId && matchedSourceId !== values.sourceId ? { ...values, sourceId: matchedSourceId } : values;
-      const validation = validateSpotInputs(calculationValues);
+      const validation = validateSpotInputs(values);
       if (!validation.ok || !validation.value) {
         setInvalidFields(invalidFieldsFromErrors(validation.errors));
         setError(labels.invalidInputs);
         return;
-      }
-      if (matchedSourceId && matchedSourceId !== values.sourceId) {
-        setValues(calculationValues);
       }
       const next = await calculateSpotFromApi(validation.value);
       setResult(next);
@@ -219,7 +199,7 @@ export function SpotCalculator() {
     } catch (err) {
       setError(labels.invalidInputs);
     }
-  }, [labels.invalidInputs, matchedSourceId, values]);
+  }, [labels.invalidInputs, values]);
 
   useEffect(() => {
     if (!storageReady) return;
@@ -228,6 +208,15 @@ export function SpotCalculator() {
     }, 120);
     return () => window.clearTimeout(timer);
   }, [storageReady, runCalculation]);
+
+  useEffect(() => {
+    if (!modal) return;
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") setModal(null);
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [modal]);
 
   function updateField(name: keyof SpotInputs, value: SpotInputs[keyof SpotInputs]) {
     setValues((current) => ({ ...current, [name]: value }));
@@ -251,9 +240,6 @@ export function SpotCalculator() {
         sourceId: sourceStillVisible ? current.sourceId : "",
       };
     });
-    if (!getFilteredSources(family).some((source) => sourceOptionLabel(source) === sourceQuery)) {
-      setSourceQuery("");
-    }
   }
 
   function updateSource(sourceId: string) {
@@ -261,16 +247,6 @@ export function SpotCalculator() {
       ...current,
       sourceId,
     }));
-  }
-
-  function updateSourceQuery(text: string) {
-    setSourceQuery(text);
-    const normalized = text.trim().toLowerCase();
-    const match = filteredSources.find((source) => {
-      const label = sourceOptionLabel(source).toLowerCase();
-      return label === normalized || label.includes(normalized) || `${source.brand} ${source.model}`.toLowerCase() === normalized || source.id.toLowerCase() === normalized;
-    });
-    updateSource(match?.id || "");
   }
 
   function updateFocalPreset(value: string) {
@@ -282,7 +258,7 @@ export function SpotCalculator() {
   }
 
   function openLampDetails() {
-    const activeSourceId = matchedSourceId || values.sourceId;
+    const activeSourceId = values.sourceId;
     if (!activeSourceId && !result?.source) {
       setModal({ title: labels.lampDetails, body: labels.manualSourceHint });
       return;
@@ -405,27 +381,22 @@ export function SpotCalculator() {
                 <option value="RF">{labels.rf}</option>
               </select>
             </div>
-            <label className="source-autocomplete source-preset-field">
+            <label className="source-preset-field">
               <span className="label-line">
                 {labels.sourcePreset}
                 <InfoButton title={labels.sourcePreset} body={info.sourcePreset} onOpen={setModal} />
               </span>
               <div className="source-with-action">
-                <input
-                  list="co2-source-presets"
-                  value={sourceQuery}
-                  placeholder={labels.sourcePresetPlaceholder}
-                  onChange={(event) => updateSourceQuery(event.target.value)}
-                />
+                <select value={values.sourceId} onChange={(event) => updateSource(event.target.value)}>
+                  <option value="">{labels.sourcePresetPlaceholder}</option>
+                  {filteredSources.map((source) => (
+                    <option key={source.id} value={source.id}>{sourceOptionLabel(source)}</option>
+                  ))}
+                </select>
                 <button className="button secondary" type="button" onClick={openLampDetails}>{labels.lampDetails}</button>
               </div>
-              <datalist id="co2-source-presets">
-                {filteredSources.map((source) => (
-                  <option key={source.id} value={sourceOptionLabel(source)} />
-                ))}
-              </datalist>
             </label>
-            {!matchedSourceId ? (
+            {!values.sourceId ? (
               <>
                 <label className={fieldInvalid("manualRatedWatt")}>
                   <FieldLabel infoKey="manualRatedWatt" labels={labels} info={info} onOpen={setModal}>
@@ -445,14 +416,16 @@ export function SpotCalculator() {
                 </label>
               </>
             ) : null}
-            <label className={fieldInvalid("measuredWatt")}>
-              <FieldLabel infoKey="measuredWatt" labels={labels} info={info} onOpen={setModal}>{labels.measuredWatt}</FieldLabel>
-              <input type="number" min="0" step="0.1" placeholder={inputPlaceholder("130 W")} value={String(values.measuredWatt ?? "")} onChange={(event) => updateField("measuredWatt", event.target.value)} />
-            </label>
-            <label className={fieldInvalid("peakWatt")}>
-              <FieldLabel infoKey="peakWatt" labels={labels} info={info} onOpen={setModal}>{labels.peakWatt}</FieldLabel>
-              <input type="number" min="0" step="0.1" placeholder={inputPlaceholder("150 W")} value={String(values.peakWatt ?? "")} onChange={(event) => updateField("peakWatt", event.target.value)} />
-            </label>
+            <div className="field-row compact-row mobile-pair">
+              <label className={fieldInvalid("measuredWatt")}>
+                <FieldLabel infoKey="measuredWatt" labels={labels} info={info} onOpen={setModal}>{labels.measuredWatt}</FieldLabel>
+                <input type="number" min="0" step="0.1" placeholder={inputPlaceholder("130 W")} value={String(values.measuredWatt ?? "")} onChange={(event) => updateField("measuredWatt", event.target.value)} />
+              </label>
+              <label className={fieldInvalid("peakWatt")}>
+                <FieldLabel infoKey="peakWatt" labels={labels} info={info} onOpen={setModal}>{labels.peakWatt}</FieldLabel>
+                <input type="number" min="0" step="0.1" placeholder={inputPlaceholder("150 W")} value={String(values.peakWatt ?? "")} onChange={(event) => updateField("peakWatt", event.target.value)} />
+              </label>
+            </div>
           </div>
         </div>
       </section>
@@ -652,17 +625,19 @@ export function SpotCalculator() {
           </CollapsibleSection>
 
           <CollapsibleSection title={labels.advanced} open={false}>
-            <label className="check-label">
-              <input type="checkbox" checked={values.useExpander} onChange={(event) => updateField("useExpander", event.target.checked)} />
-              <FieldLabel infoKey="useExpander" labels={labels} info={info} onOpen={setModal}>{labels.useExpander}</FieldLabel>
-            </label>
-            <div className="field-row preview-row">
+            <div className="field-row compact-row expander-control-row">
+              <label className="check-label">
+                <input type="checkbox" checked={values.useExpander} onChange={(event) => updateField("useExpander", event.target.checked)} />
+                <FieldLabel infoKey="useExpander" labels={labels} info={info} onOpen={setModal}>{labels.useExpander}</FieldLabel>
+              </label>
               <label className={fieldInvalid("expanderMultiplier")}>
                 <FieldLabel infoKey="expanderMultiplier" labels={labels} info={info} onOpen={setModal}>{labels.expanderMultiplier}</FieldLabel>
                 <select value={String(values.expanderMultiplier)} onChange={(event) => updateField("expanderMultiplier", Number(event.target.value))} disabled={!values.useExpander}>
                   {EXPANDER_MULTIPLIERS.map((multiplier) => <option key={multiplier} value={multiplier}>{multiplier}x</option>)}
                 </select>
               </label>
+            </div>
+            <div className="field-row preview-row">
               {result ? <ExpanderGraph result={result} labels={labels} unitSystem={unitSystem} onExpand={setGraphModal} /> : null}
             </div>
             <label>
