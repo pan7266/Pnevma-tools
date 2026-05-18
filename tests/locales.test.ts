@@ -58,6 +58,9 @@ const allowedSameValues = new Set([
   "CAD",
   "MXL",
   "GT2",
+  "IP",
+  "URL",
+  "User-agent",
 ]);
 
 const allowedSamePaths = new Set([
@@ -71,6 +74,9 @@ const allowedSamePaths = new Set([
   "common.contactWebsite",
   "common.contactEmailLabel",
   "common.contactWebsiteLabel",
+  "common.adminStatus",
+  "common.adminPassword",
+  "common.adminTimestamp",
   "common.imperial",
   "spot.percentUnit",
   "spot.english",

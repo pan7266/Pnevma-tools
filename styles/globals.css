@@ -1546,6 +1546,59 @@ th {
   font-weight: 750;
 }
 
+.admin-panel {
+  display: grid;
+  gap: 16px;
+}
+
+.admin-login {
+  display: grid;
+  grid-template-columns: minmax(180px, 260px) minmax(180px, 260px) auto;
+  gap: 12px;
+  align-items: end;
+}
+
+.admin-log-table-wrap {
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel-solid);
+}
+
+.admin-log-table {
+  width: 100%;
+  min-width: 980px;
+  border-collapse: collapse;
+  font-size: 0.78rem;
+}
+
+.admin-log-table th,
+.admin-log-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+
+.admin-log-table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--panel-solid);
+  color: var(--muted);
+  font-size: 0.7rem;
+  text-transform: uppercase;
+}
+
+.admin-log-table td {
+  color: var(--ink);
+}
+
+.admin-url-cell {
+  max-width: 360px;
+  word-break: break-word;
+}
+
 @media (max-width: 720px) {
   .contact-logo-panel {
     grid-template-columns: 1fr;
@@ -1559,6 +1612,10 @@ th {
   .contact-logo {
     min-height: 96px;
     padding: 18px 20px;
+  }
+
+  .admin-login {
+    grid-template-columns: 1fr;
   }
 }
 

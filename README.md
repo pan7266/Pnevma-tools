@@ -46,8 +46,17 @@ npm run test
 - `GET /api/spot/options`: returns Spot calculator defaults and optical option presets.
 - `GET /api/axis/motors`: returns structured axis motor presets.
 - `GET /api/kerf/materials`: returns Kerf Advisor material, operation, quality-goal, calibration, and default optical-profile data.
+- `POST /api/admin/logs`: authenticated read-only request-log view used by `/admin`.
 
 The API routes are thin wrappers. Calculator math lives in `lib/calculators`.
+
+## Admin Request Logs
+
+Open `/admin` on a Next.js runtime to view recent request logs. The panel is read-only and shows timestamp, IP, method, status, URL, and user-agent.
+
+Default admin credentials are intended for the project owner. The password is stored in source as a SHA-256 hash, and deployments may override credentials with `ADMIN_USERNAME`, `ADMIN_PASSWORD`, or `ADMIN_PASSWORD_SHA256`.
+
+Request logs are stored server-side in `.request-logs/requests.jsonl` plus a rolling in-memory buffer. This is intentionally ignored by Git.
 
 ## Static Export / GitHub Pages
 
@@ -57,7 +66,7 @@ Next.js static export is attempted with:
 npx next export
 ```
 
-For current Next.js versions, static export is configured through `output: "export"` and `next build`. This app also includes REST route handlers; GitHub Pages can serve the static pages and static GET JSON endpoints, while the client falls back to the same pure calculator functions when POST calculation routes are unavailable. A full Next.js runtime is still preferred when API-backed calculation logging or server-side validation is required.
+For current Next.js versions, static export is configured through `output: "export"` and `next build`. This app also includes REST route handlers; GitHub Pages can serve the static pages and static GET JSON endpoints, while the client falls back to the same pure calculator functions when POST calculation routes are unavailable. The `/admin` page shell is exported, but authenticated request logs require a full Next.js runtime because GitHub Pages cannot run server-side route handlers or write log files.
 
 ## Migration Notes
 
@@ -65,7 +74,7 @@ For current Next.js versions, static export is configured through `output: "expo
 - Static source, finish, lens, mirror, option, label, default, and notice data were extracted into typed modules under `lib/data`.
 - The old iframe and `postMessage` workspace was replaced with direct React routes and shared settings context.
 - Graphs remain inline SVG. No charting library is used.
-- No GraphQL, database, authentication, Tailwind, shadcn/ui, browser Babel, UMD React scripts, iframe, or charting package is included.
+- No GraphQL, database, Tailwind, shadcn/ui, browser Babel, UMD React scripts, iframe, or charting package is included. Authentication is limited to the read-only `/admin` request-log panel.
 - CO2 lamp/source detail links now prefer official manufacturer pages, manuals, or datasheets where available, including RECI, SPT, EFR, LaserLife, Novanta SYNRAD, Coherent, and Luxinar sources.
 - The Spot calculator includes live calculation, sticky readouts, collapsible graph sections, optical-path visualization, focal-length presets up to 228.6 mm plus custom focal length input, and a rough spot-temperature estimate shown as a thermal index.
 - The Kerf Advisor imports the Spot optical profile, explains measured spot/kerf, Rayleigh range, focus depth, taper tendency, confidence, and calibration workflows with inline SVG diagrams.
