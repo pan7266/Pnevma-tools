@@ -26,12 +26,14 @@ export function AdminPanel() {
   const [password, setPassword] = useState("");
   const [token, setToken] = useState("");
   const [logs, setLogs] = useState<RequestLogEntry[]>([]);
-  const [error, setError] = useState("");
+  const [message, setMessage] = useState("");
+  const [messageTone, setMessageTone] = useState<"error" | "notice">("error");
   const [loading, setLoading] = useState(false);
 
   async function loadLogs(nextToken = token) {
     setLoading(true);
-    setError("");
+    setMessage("");
+    setMessageTone("error");
     try {
       const response = await fetch("/api/admin/logs", {
         method: "POST",
@@ -42,13 +44,19 @@ export function AdminPanel() {
       });
 
       if (response.status === 401) {
-        setError(labels.adminAuthFailed);
+        setMessage(labels.adminAuthFailed);
         setToken("");
         return;
       }
 
+      if (response.status === 404 || response.status === 405 || response.status === 501) {
+        setMessage(labels.adminRuntimeUnavailable);
+        setMessageTone("notice");
+        return;
+      }
+
       if (!response.ok) {
-        setError(`${labels.adminLoadFailed}: ${response.status}`);
+        setMessage(`${labels.adminLoadFailed}: ${response.status}`);
         return;
       }
 
@@ -56,7 +64,7 @@ export function AdminPanel() {
       setLogs(Array.isArray(payload.logs) ? payload.logs : []);
       setToken(nextToken);
     } catch {
-      setError(labels.adminLoadFailed);
+      setMessage(labels.adminLoadFailed);
     } finally {
       setLoading(false);
     }
@@ -71,7 +79,8 @@ export function AdminPanel() {
     setToken("");
     setPassword("");
     setLogs([]);
-    setError("");
+    setMessage("");
+    setMessageTone("error");
   }
 
   return (
@@ -116,7 +125,7 @@ export function AdminPanel() {
           </div>
         )}
 
-        {error ? <div className="error">{error}</div> : null}
+        {message ? <div className={messageTone === "notice" ? "data-note" : "error"}>{message}</div> : null}
         <p className="small">{labels.adminStorageNote}</p>
 
         <div className="admin-log-table-wrap">
