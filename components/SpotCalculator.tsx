@@ -333,7 +333,7 @@ export function SpotCalculator() {
     }
     if (!result) return null;
     if (graphModal === "path") return <PowerPathGraph result={result} labels={labels} expanded />;
-    if (graphModal === "beam") return <BeamPreview result={result} labels={labels} unitSystem={unitSystem} expanded />;
+    if (graphModal === "beam") return <BeamPreview result={result} labels={labels} unitSystem={unitSystem} expanded onFocalLengthChange={(focal) => updateField("focalLength", focal)} />;
     if (graphModal === "finish") return <FinishGraph values={values} result={result} labels={labels} lang={lang} unitSystem={unitSystem} />;
     if (graphModal === "focal") return <FocalGraph values={values} result={result} labels={labels} lang={lang} unitSystem={unitSystem} expanded />;
     if (graphModal === "source") return <BeamLibraryGraph values={values} result={result} labels={labels} lang={lang} unitSystem={unitSystem} />;
@@ -714,7 +714,7 @@ export function SpotCalculator() {
                   <summary>
                     <span>{labels.beamPathTitle}</span>
                   </summary>
-                  <BeamPreview result={result} labels={labels} unitSystem={unitSystem} onExpand={setGraphModal} />
+                  <BeamPreview result={result} labels={labels} unitSystem={unitSystem} onExpand={setGraphModal} onFocalLengthChange={(focal) => updateField("focalLength", focal)} />
                 </details>
                 <details className="graph-collapsible clickable-graph" open onClick={(event) => {
                   if ((event.target as HTMLElement).closest("summary")) return;

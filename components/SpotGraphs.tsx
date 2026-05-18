@@ -19,6 +19,7 @@ interface GraphProps {
   unitSystem: UnitSystem;
   labels: Record<string, string>;
   onExpand?: (graph: "path" | "beam" | "finish" | "focal" | "source" | "pulse" | "expander" | "optical") => void;
+  onFocalLengthChange?: (focalLengthMm: number) => void;
   expanded?: boolean;
 }
 
@@ -35,10 +36,9 @@ export function BeamPreview({
   labels,
   unitSystem,
   onExpand,
+  onFocalLengthChange,
   expanded = false,
-}: Pick<GraphProps, "result" | "labels" | "unitSystem" | "onExpand" | "expanded"> & {
-  onFocalLengthChange?: never;
-}) {
+}: Pick<GraphProps, "result" | "labels" | "unitSystem" | "onExpand" | "onFocalLengthChange" | "expanded">) {
   const centerY = 122;
   const startX = 46;
   const lensX = 286;
@@ -52,16 +52,23 @@ export function BeamPreview({
   const lensHalf = clamp((result.lensDiameter * pxPerMm) / 2, 28, 76);
   const beamAtLensHalf = clamp((result.effectiveBeam * pxPerMm) / 2, 4, Math.max(lensHalf - 5, 5));
   const alignmentOffset = clamp(result.alignmentLoss * lensHalf * 1.4, -14, 14);
+  const incomingCenterY = centerY + alignmentOffset;
   const lensCenterY = centerY + alignmentOffset;
-  const focusY = centerY + alignmentOffset * 0.62;
-  const postLensDrift = alignmentOffset * 1.35;
+  const focusY = centerY + alignmentOffset * 0.78;
+  const exitSlope = (focusY - lensCenterY) / Math.max(focusX - lensX, 1);
+  const terminalCenterY = focusY + exitSlope * (endX - focusX) * 0.5;
   const spotHalf = clamp(result.spot * 360, 3.2, 10);
-  const outputHalf = clamp(spotHalf + (endX - focusX) * 0.11, 18, 54);
+  const outputHalf = clamp(spotHalf + 6, 7, 18);
   const open = onExpand ? () => onExpand("beam") : undefined;
   const rayColor = result.clipped ? "var(--amber)" : "var(--beam)";
   const paraxialColor = "var(--primary)";
   const focalDots = result.focalLength > maxPresetFocal ? [...focalOptions, result.focalLength] : focalOptions;
   const focalLabelY = 236;
+  const convexLens = result.shape.labelKey === "convex";
+  const lensPath = convexLens
+    ? `M${lensX} ${centerY - lensHalf} C${lensX - 5} ${centerY - lensHalf * 0.55} ${lensX - 5} ${centerY + lensHalf * 0.55} ${lensX} ${centerY + lensHalf} C${lensX + 5} ${centerY + lensHalf * 0.55} ${lensX + 5} ${centerY - lensHalf * 0.55} ${lensX} ${centerY - lensHalf} Z`
+    : `M${lensX - 3} ${centerY - lensHalf} C${lensX - 8} ${centerY - lensHalf * 0.35} ${lensX - 8} ${centerY + lensHalf * 0.35} ${lensX - 3} ${centerY + lensHalf} C${lensX + 5} ${centerY + lensHalf * 0.35} ${lensX + 5} ${centerY - lensHalf * 0.35} ${lensX - 3} ${centerY - lensHalf} Z`;
+  const focalButtonsEnabled = Boolean(onFocalLengthChange);
 
   return (
     <div
@@ -75,11 +82,11 @@ export function BeamPreview({
         <rect width="800" height="260" fill="transparent" />
         <line x1={startX} x2={endX} y1={centerY} y2={centerY} stroke="var(--axis)" strokeDasharray="5 7" opacity="0.72" />
 
-        <path d={`M${startX} ${centerY - incomingHalf} L${lensX} ${centerY - incomingHalf} L${lensX + 10} ${lensCenterY - beamAtLensHalf} L${focusX} ${focusY - spotHalf} L${endX} ${centerY + postLensDrift - outputHalf}`} fill="none" stroke={rayColor} strokeWidth="1.45" strokeLinecap="round" />
-        <path d={`M${startX} ${centerY + incomingHalf} L${lensX} ${centerY + incomingHalf} L${lensX + 10} ${lensCenterY + beamAtLensHalf} L${focusX} ${focusY + spotHalf} L${endX} ${centerY + postLensDrift + outputHalf}`} fill="none" stroke={rayColor} strokeWidth="1.45" strokeLinecap="round" />
-        <path d={`M${startX} ${centerY} L${lensX + 10} ${lensCenterY} L${focusX} ${focusY} L${endX} ${centerY + postLensDrift}`} fill="none" stroke={paraxialColor} strokeWidth="1.1" strokeLinecap="round" opacity="0.72" />
+        <path d={`M${startX} ${incomingCenterY - incomingHalf} L${lensX} ${incomingCenterY - incomingHalf} L${focusX} ${focusY - spotHalf} L${endX} ${terminalCenterY - outputHalf}`} fill="none" stroke={rayColor} strokeWidth="1.45" strokeLinecap="round" />
+        <path d={`M${startX} ${incomingCenterY + incomingHalf} L${lensX} ${incomingCenterY + incomingHalf} L${focusX} ${focusY + spotHalf} L${endX} ${terminalCenterY + outputHalf}`} fill="none" stroke={rayColor} strokeWidth="1.45" strokeLinecap="round" />
+        <path d={`M${startX} ${incomingCenterY} L${lensX} ${lensCenterY} L${focusX} ${focusY} L${endX} ${terminalCenterY}`} fill="none" stroke={paraxialColor} strokeWidth="1.1" strokeLinecap="round" opacity="0.72" />
 
-        <rect x={lensX - 3} y={centerY - lensHalf} width="6" height={lensHalf * 2} rx="3" fill="color-mix(in srgb, var(--primary) 34%, var(--panel-solid))" stroke="var(--primary)" strokeWidth="1.6" opacity="0.94" />
+        <path d={lensPath} fill="color-mix(in srgb, var(--primary) 34%, var(--panel-solid))" stroke="var(--primary)" strokeWidth="1.6" opacity="0.94" />
         <line x1={lensX} x2={lensX} y1={centerY - lensHalf - 12} y2={centerY + lensHalf + 12} stroke="var(--line)" strokeWidth="0.8" />
 
         <line x1={focusX} x2={focusX} y1={centerY - 40} y2={centerY + 40} stroke="var(--beam)" strokeWidth="1.4" strokeDasharray="4 5" />
@@ -112,7 +119,24 @@ export function BeamPreview({
           const x = clamp(lensX + focal * focalScale, lensX + 8, endX - 18);
           const selected = Math.abs(focal - result.focalLength) < 0.02;
           return (
-            <g key={focal}>
+            <g
+              key={focal}
+              className="focal-dot-button"
+              role={focalButtonsEnabled ? "button" : undefined}
+              tabIndex={focalButtonsEnabled ? 0 : undefined}
+              aria-label={`${labels.focalLength}: ${formatLength(focal, unitSystem, 2)}`}
+              onClick={(event) => {
+                event.stopPropagation();
+                onFocalLengthChange?.(focal);
+              }}
+              onKeyDown={(event) => {
+                if (!onFocalLengthChange || (event.key !== "Enter" && event.key !== " ")) return;
+                event.preventDefault();
+                event.stopPropagation();
+                onFocalLengthChange(focal);
+              }}
+            >
+              <rect x={x - 14} y={focalLabelY - 14} width="28" height="28" rx="14" fill="transparent" stroke={selected ? "var(--beam)" : "var(--line)"} strokeWidth={selected ? "1.2" : "0.8"} opacity={selected ? 0.8 : 0.38} />
               <circle cx={x} cy={focalLabelY} r={selected ? 5 : 3.2} fill={selected ? "var(--beam)" : "var(--primary)"} opacity={selected ? 1 : 0.72}>
                 <title>{labels.focalLength}: {formatLength(focal, unitSystem, 2)}</title>
               </circle>
@@ -325,7 +349,7 @@ export function OpticalPathGraph({ result, labels, unitSystem, onExpand, expande
     if (stageId === "combiner") {
       if (result.beamCombinerPosition === "nearSource") return { x: 660, y: 84 };
       if (result.beamCombinerPosition === "beforeFirstMirror") return { x: 380, y: 84 };
-      return { x: 142, y: 84 };
+      return { x: 184, y: 126 };
     }
     if (stageId === "mirror-1") return { x: 118, y: 84 };
     if (stageId === "mirror-2") return { x: 118, y: 282 };
@@ -336,6 +360,7 @@ export function OpticalPathGraph({ result, labels, unitSystem, onExpand, expande
   }
   function labelFor(stageId: string, x: number, y: number) {
     if (stageId === "source") return { x: x - 4, y: y - 34, anchor: "end" as const };
+    if (stageId === "combiner" && result.beamCombinerPosition === "firstMirror") return { x: x + 36, y: y + 34, anchor: "start" as const };
     if (stageId === "combiner") return { x, y: y - 30, anchor: "middle" as const };
     if (stageId === "mirror-1") return { x, y: y - 38, anchor: "middle" as const };
     if (stageId === "mirror-2") return { x, y: y + 48, anchor: "middle" as const };

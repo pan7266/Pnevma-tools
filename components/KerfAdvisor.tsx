@@ -14,6 +14,7 @@ import {
   KERF_QUALITY_GOALS,
   KERF_STORAGE_KEYS,
 } from "@/lib/data/kerf";
+import { buildLocalizedLightBurnNotes, localizedConfidenceExplanation, translateKerfList } from "@/lib/i18n/kerf-result";
 import { formatLength, formatNumber } from "@/lib/units/convert";
 import { getLocale } from "@/locales";
 import type {
@@ -45,6 +46,15 @@ function roundThickness(value: number): number {
   const safe = Math.max(value, 0.01);
   const step = thicknessStepFor(safe);
   return Number((Math.round(safe / step) * step).toFixed(2));
+}
+
+function compactProfileSource(profileName: string): string {
+  const source = profileName.split("/")[0]?.trim() || profileName;
+  return source.length > 34 ? `${source.slice(0, 31)}...` : source;
+}
+
+function opticalProfileOptionLabel(profile: OpticalProfile, labels: Record<string, string>): string {
+  return `${labels.source} "${compactProfileSource(profile.profileName)}" | ${labels.lensFocalLength} ${formatNumber(profile.lensFocalLengthMm, 1)} mm | ${labels.measuredSpot} ${formatNumber(profile.measuredSpotDiameterMm, 3)}`;
 }
 
 function InfoLabel({
@@ -156,12 +166,13 @@ function CalibrationModeGraph({ mode, labels }: { mode: KerfCalibrationMode; lab
   const width = 520;
   const height = 180;
   const title = labels[mode] || mode;
+  const description = labels[`calibrationModeMeaning_${mode}`] || labels.helpCalibrationMode;
   return (
     <div className="graph-panel kerf-calibration-graph">
       <div className="graph-head">
         <div>
           <h2>{labels.calibrationDiagramTitle}</h2>
-          <p>{labels.helpCalibrationMode}</p>
+          <p>{description}</p>
         </div>
       </div>
       <svg className="graph" viewBox={`0 0 ${width} ${height}`} role="img" aria-label={title}>
@@ -187,11 +198,13 @@ function CalibrationModeGraph({ mode, labels }: { mode: KerfCalibrationMode; lab
 }
 
 function ThermalSelectionPanel({ operation, qualityGoal, labels }: { operation: KerfOperation; qualityGoal: KerfQualityGoal; labels: Record<string, string> }) {
+  const operationMeaning = labels[`operationMeaning_${operation}`] || labels.helpOperation;
+  const qualityGoalMeaning = labels[`qualityGoalMeaning_${qualityGoal}`] || labels.helpQualityGoal;
   return (
     <article className="mini-panel thermal-selection-panel">
       <h2>{labels.thermalSelectionTitle}</h2>
-      <p className="small"><strong>{labels.operation}:</strong> {labels[operation]} - {labels.helpOperation}</p>
-      <p className="small"><strong>{labels.qualityGoal}:</strong> {labels[qualityGoal]} - {labels.helpQualityGoal}</p>
+      <p className="small"><strong>{labels[operation]}:</strong> {operationMeaning}</p>
+      <p className="small"><strong>{labels[qualityGoal]}:</strong> {qualityGoalMeaning}</p>
       <svg viewBox="0 0 520 92" role="img" aria-label={labels.thermalSelectionTitle}>
         <rect x="28" y="38" width="360" height="16" rx="8" fill="url(#kerfHeatGradient)" />
         <defs>
@@ -264,6 +277,8 @@ export function KerfAdvisor() {
     },
   };
   const result = useMemo(() => calculateKerfAdvisor(inputs), [inputs]);
+  const confidenceExplanation = useMemo(() => localizedConfidenceExplanation(result, labels), [result, labels]);
+  const lightBurnNotes = useMemo(() => buildLocalizedLightBurnNotes(result, inputs, labels), [result, inputs, labels]);
   const steps = [
     { key: "optical", label: labels.stepOptical },
     { key: "material", label: labels.stepMaterial },
@@ -354,13 +369,13 @@ export function KerfAdvisor() {
                 <label>
                   <InfoLabel label={labels.opticalProfile} body={help("helpOpticalProfile", labels.importProfile)} onOpen={setInfoModal} />
                   <select value={selectedProfileId} onChange={(event) => setSelectedProfileId(event.target.value)}>
-                    {profiles.map((profile) => <option key={profile.id} value={profile.id}>{profile.profileName}</option>)}
+                    {profiles.map((profile) => <option key={profile.id} value={profile.id}>{opticalProfileOptionLabel(profile, labels)}</option>)}
                   </select>
                   <span className="field-hint">{profiles.length ? labels.importProfile : labels.noProfile}</span>
                 </label>
-                <div className="kv"><span>{labels.focusDepth}</span><span>{formatLength(selectedProfile.lensFocalLengthMm, unitSystem, 2)}</span></div>
-                <div className="kv"><span>{labels.measuredKerf}</span><span>{formatLength(selectedProfile.measuredSpotDiameterMm, unitSystem, 4)}</span></div>
-                <div className="kv"><span>Rayleigh</span><span>{formatLength(selectedProfile.rayleighRangeMm, unitSystem, 4)}</span></div>
+                <div className="kv"><span>{labels.lensFocalLength}</span><span>{formatLength(selectedProfile.lensFocalLengthMm, unitSystem, 2)}</span></div>
+                <div className="kv"><span>{labels.measuredSpot}</span><span>{formatLength(selectedProfile.measuredSpotDiameterMm, unitSystem, 4)}</span></div>
+                <div className="kv"><span>{labels.rayleigh}</span><span>{formatLength(selectedProfile.rayleighRangeMm, unitSystem, 4)}</span></div>
                 <p className="small">{labels.opticalProfileExplain}</p>
                 <p className="small">{labels.measuredKerfExplain}</p>
               </section>
@@ -434,6 +449,7 @@ export function KerfAdvisor() {
                   <select value={calibrationMode} onChange={(event) => setCalibrationMode(event.target.value as KerfCalibrationMode)}>
                     {KERF_CALIBRATION_MODES.map((item) => <option key={item} value={item}>{labels[item]}</option>)}
                   </select>
+                  <span className="field-hint">{labels[`calibrationModeMeaning_${calibrationMode}`] || labels.helpCalibrationMode}</span>
                 </label>
                 <div className="field-row compact-row">
                   <label><InfoLabel label={`${labels.topKerf} (mm)`} body={help("helpTopKerf", labels.measuredKerf)} onOpen={setInfoModal} /><input type="number" step="0.001" value={topKerf} onChange={(event) => setTopKerf(event.target.value)} /></label>
@@ -472,7 +488,7 @@ export function KerfAdvisor() {
               <MetricCard label={labels.focusDepth} value={`${formatNumber(result.recommendedFocusDepthMm, 3)} mm`} sub={`${formatNumber(result.recommendedFocusPercent, 1)}% · ${labels[result.placementLabelKey]}`} tone={result.blocked ? "danger" : "ok"} />
               <MetricCard label={labels.focusRange} value={`${formatNumber(result.acceptableFocusMinMm, 2)} - ${formatNumber(result.acceptableFocusMaxMm, 2)} mm`} sub={`${formatNumber(result.acceptableFocusMinPercent, 1)}% - ${formatNumber(result.acceptableFocusMaxPercent, 1)}%`} />
               <MetricCard label={labels.opticalTaper} value={labels[result.opticalTaperTendency]} sub={`${labels.symmetryError}: ${formatNumber(result.opticalSymmetryError * 100, 1)}%`} tone={result.opticalTaperTendency === "high" ? "warn filled" : "ok"} />
-              <MetricCard label={labels.confidence} value={`${labels[result.confidence]} ${formatNumber(result.confidenceScore, 0)}/100`} sub={result.confidenceExplanation} />
+              <MetricCard label={labels.confidence} value={`${labels[result.confidence]} ${formatNumber(result.confidenceScore, 0)}/100`} sub={confidenceExplanation} />
             </div>
             {activeStep === "optical" ? <RayleighRangeGraph profile={selectedProfile} labels={labels} /> : null}
             <div className="panels kerf-explain-grid">
@@ -484,15 +500,15 @@ export function KerfAdvisor() {
             <div className="panels kerf-panels">
               <article className="mini-panel">
                 <h2>{labels.expectedKerf}</h2>
-                {result.expectedKerfBehavior.map((item) => <p className="small" key={item}>{item}</p>)}
+                {translateKerfList(result.expectedKerfBehavior, labels).map((item) => <p className="small" key={item}>{item}</p>)}
               </article>
               <article className="mini-panel">
                 <h2>{labels.benefits}</h2>
-                {result.expectedBenefits.map((item) => <p className="small" key={item}>{item}</p>)}
+                {translateKerfList(result.expectedBenefits, labels).map((item) => <p className="small" key={item}>{item}</p>)}
               </article>
               <article className="mini-panel warn">
                 <h2>{labels.risks}</h2>
-                {[...result.expectedRisks, ...result.warnings].map((item) => <p className="small" key={item}>{item}</p>)}
+                {translateKerfList([...result.expectedRisks, ...result.warnings], labels).map((item) => <p className="small" key={item}>{item}</p>)}
               </article>
             </div>
             <div className="panel panel-pad">
@@ -500,8 +516,8 @@ export function KerfAdvisor() {
                 {labels.lightBurnNotes}
                 <InfoButton title={labels.lightBurnNotes} body={help("helpLightBurnNotes", labels.calibrationTest)} onOpen={setInfoModal} />
               </h2>
-              <textarea className="notes-output" readOnly value={result.lightBurnNotes} />
-              <button className="button secondary" type="button" onClick={() => navigator.clipboard?.writeText(result.lightBurnNotes)}>{labels.copyNotes}</button>
+              <textarea className="notes-output" readOnly value={lightBurnNotes} />
+              <button className="button secondary" type="button" onClick={() => navigator.clipboard?.writeText(lightBurnNotes)}>{labels.copyNotes}</button>
             </div>
           </section>
         </div>
@@ -512,7 +528,7 @@ export function KerfAdvisor() {
           <div className="modal" onClick={(event) => event.stopPropagation()}>
             <div className="modal-head">
               <h2>{infoModal.title}</h2>
-              <button className="button secondary modal-close" type="button" onClick={() => setInfoModal(null)} aria-label="Close">x</button>
+              <button className="button secondary modal-close" type="button" onClick={() => setInfoModal(null)} aria-label={labels.close}>x</button>
             </div>
             <p className="modal-body-text">{infoModal.body}</p>
           </div>

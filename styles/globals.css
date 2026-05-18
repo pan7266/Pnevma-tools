@@ -309,6 +309,16 @@ a {
   text-decoration: none;
 }
 
+.focal-dot-button {
+  cursor: pointer;
+}
+
+.focal-dot-button:focus-visible rect {
+  stroke: var(--primary);
+  stroke-width: 2;
+  opacity: 1;
+}
+
 .app {
   width: 100%;
   padding-bottom: 24px;
@@ -1419,6 +1429,137 @@ th {
   margin: 0;
   color: var(--muted);
   line-height: 1.55;
+}
+
+.contact-card {
+  display: grid;
+  gap: 24px;
+  max-width: 980px;
+  border: 1px solid color-mix(in srgb, var(--line) 72%, transparent);
+  border-radius: 8px;
+  background: #252525;
+  color: #f6f4ee;
+  padding: clamp(22px, 4vw, 44px);
+  box-shadow: var(--shadow);
+}
+
+.contact-identity {
+  display: flex;
+  align-items: center;
+  gap: clamp(18px, 3vw, 28px);
+}
+
+.contact-avatar {
+  display: grid;
+  place-items: center;
+  width: clamp(106px, 16vw, 156px);
+  aspect-ratio: 1;
+  border-radius: 999px;
+  background: #ffd33d;
+  color: #252525;
+  font-size: clamp(1.4rem, 4vw, 2.6rem);
+  font-weight: 950;
+  letter-spacing: 0;
+}
+
+.contact-lines {
+  display: grid;
+  gap: 5px;
+}
+
+.contact-lines h2,
+.contact-lines p {
+  margin: 0;
+}
+
+.contact-lines h2 {
+  font-size: clamp(1.25rem, 2.4vw, 1.8rem);
+}
+
+.contact-lines p {
+  color: #f6f4ee;
+}
+
+.contact-links {
+  display: grid;
+  gap: 2px;
+  margin-top: 12px;
+  color: #7fc6df;
+}
+
+.contact-card a {
+  color: #7fc6df;
+}
+
+.contact-logo-panel {
+  display: grid;
+  grid-template-columns: minmax(240px, 405px) minmax(220px, 1fr);
+  gap: 22px;
+  align-items: stretch;
+}
+
+.contact-logo {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  min-height: 120px;
+  padding: 22px 28px;
+  background: #0d3a45;
+  color: #eee6c8;
+  overflow: hidden;
+}
+
+.contact-logo svg {
+  width: 74px;
+  height: 74px;
+  flex: 0 0 auto;
+}
+
+.contact-logo span {
+  font-size: clamp(2rem, 5vw, 3.9rem);
+  font-weight: 300;
+  letter-spacing: 0.04em;
+}
+
+.contact-data {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+}
+
+.contact-data div {
+  display: grid;
+  gap: 2px;
+}
+
+.contact-data dt {
+  color: #aab2bd;
+  font-size: 0.72rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.contact-data dd {
+  margin: 0;
+  color: #f6f4ee;
+  font-weight: 750;
+}
+
+@media (max-width: 720px) {
+  .contact-logo-panel {
+    grid-template-columns: 1fr;
+  }
+
+  .contact-identity {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .contact-logo {
+    min-height: 96px;
+    padding: 18px 20px;
+  }
 }
 
 .kerf-wizard {
