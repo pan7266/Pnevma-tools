@@ -35,6 +35,7 @@ export const tr: LocalePack = {
     "adminStorageNote": "Kayıtlar bu dağıtım için sunucu tarafında yerel dönen dosyada ve bellek tamponunda saklanır.",
     "adminAuthFailed": "Kimlik doğrulama başarısız.",
     "adminLoadFailed": "İstek kayıtları yüklenemedi",
+    "adminRuntimeUnavailable": "İstek kayıtları Next.js sunucu çalışma zamanına ihtiyaç duyar. Bu statik GitHub Pages dağıtımı admin sayfasını gösterebilir, ancak kimlik doğrulama yapamaz, IP toplayamaz veya sunucu log dosyalarını okuyamaz.",
     "adminNoLogs": "Henüz istek kaydı yok.",
     "adminTimestamp": "Zaman damgası",
     "adminIp": "IP",

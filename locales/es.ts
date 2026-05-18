@@ -35,6 +35,7 @@ export const es: LocalePack = {
     "adminStorageNote": "Los registros se guardan en el servidor en un archivo local rotativo y un búfer de memoria para este despliegue.",
     "adminAuthFailed": "Autenticación fallida.",
     "adminLoadFailed": "No se pudieron cargar los registros",
+    "adminRuntimeUnavailable": "Los registros de solicitudes necesitan el runtime de servidor de Next.js. Este despliegue estático de GitHub Pages puede mostrar la página admin, pero no puede autenticar, recopilar IP ni leer archivos de registro del servidor.",
     "adminNoLogs": "Aún no hay registros.",
     "adminTimestamp": "Marca de tiempo",
     "adminIp": "IP",

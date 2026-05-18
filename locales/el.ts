@@ -36,6 +36,7 @@ export const el: LocalePack = {
     adminStorageNote: "Τα logs αποθηκεύονται server-side σε τοπικό rolling αρχείο και memory buffer για αυτό το deployment.",
     adminAuthFailed: "Αποτυχία authentication.",
     adminLoadFailed: "Δεν φορτώθηκαν τα request logs",
+    adminRuntimeUnavailable: "Τα request logs χρειάζονται Next.js server runtime. Αυτό το static GitHub Pages deployment μπορεί να δείξει τη σελίδα admin, αλλά δεν μπορεί να κάνει authentication, να συλλέξει IP ή να διαβάσει server log files.",
     adminNoLogs: "Δεν υπάρχουν request logs ακόμη.",
     adminTimestamp: "Timestamp",
     adminIp: "IP",

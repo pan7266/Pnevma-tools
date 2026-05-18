@@ -35,6 +35,7 @@ export const de: LocalePack = {
     "adminStorageNote": "Logs werden serverseitig in einer lokalen Rolling-Datei und im Speicherpuffer dieser Bereitstellung gespeichert.",
     "adminAuthFailed": "Authentifizierung fehlgeschlagen.",
     "adminLoadFailed": "Request-Logs konnten nicht geladen werden",
+    "adminRuntimeUnavailable": "Request-Logs benötigen die Next.js-Serverlaufzeit. Dieses statische GitHub-Pages-Deployment kann die Admin-Seite anzeigen, aber keine Authentifizierung ausführen, IPs erfassen oder Server-Logdateien lesen.",
     "adminNoLogs": "Noch keine Request-Logs.",
     "adminTimestamp": "Zeitstempel",
     "adminIp": "IP",

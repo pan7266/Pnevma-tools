@@ -35,6 +35,7 @@ export const it: LocalePack = {
     "adminStorageNote": "I log sono salvati lato server in un file locale rotativo e in un buffer memoria per questo deployment.",
     "adminAuthFailed": "Autenticazione non riuscita.",
     "adminLoadFailed": "Impossibile caricare i log richieste",
+    "adminRuntimeUnavailable": "I log delle richieste richiedono il runtime server Next.js. Questo deployment statico GitHub Pages può mostrare la pagina admin, ma non può autenticare, raccogliere IP o leggere file log server.",
     "adminNoLogs": "Nessun log richiesta ancora.",
     "adminTimestamp": "Timestamp",
     "adminIp": "IP",

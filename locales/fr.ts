@@ -35,6 +35,7 @@ export const fr: LocalePack = {
     "adminStorageNote": "Les logs sont stockés côté serveur dans un fichier local roulant et un tampon mémoire pour ce déploiement.",
     "adminAuthFailed": "Authentification échouée.",
     "adminLoadFailed": "Impossible de charger les logs de requêtes",
+    "adminRuntimeUnavailable": "Les logs de requêtes nécessitent l’environnement serveur Next.js. Ce déploiement statique GitHub Pages peut afficher la page admin, mais il ne peut pas authentifier, collecter les IP ou lire les fichiers logs serveur.",
     "adminNoLogs": "Aucun log de requête pour le moment.",
     "adminTimestamp": "Horodatage",
     "adminIp": "IP",
