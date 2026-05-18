@@ -1,4 +1,4 @@
-import { mkdir, readFile, appendFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 export interface RequestLogEntry {
@@ -32,6 +32,8 @@ const store = globalLogStore.__pnevmaRequestLogStore ?? {
 
 globalLogStore.__pnevmaRequestLogStore = store;
 
+let persistQueue: Promise<void> = Promise.resolve();
+
 function requestPath(url: string): string {
   try {
     const parsed = new URL(url);
@@ -55,7 +57,6 @@ function trimLogs(logs: RequestLogEntry[]) {
 async function ensureLoaded() {
   if (store.loaded) return;
   if (!store.loading) {
-    const existingLogs = store.logs;
     store.loading = readFile(LOG_FILE, "utf8")
       .then((content) => {
         const loadedLogs = content
@@ -64,12 +65,10 @@ async function ensureLoaded() {
           .map((line) => JSON.parse(line) as RequestLogEntry)
           .filter((entry) => entry && typeof entry.id === "string");
         const merged = new Map<string, RequestLogEntry>();
-        [...loadedLogs, ...existingLogs].forEach((entry) => merged.set(entry.id, entry));
+        [...loadedLogs, ...store.logs].forEach((entry) => merged.set(entry.id, entry));
         store.logs = trimLogs([...merged.values()].sort((a, b) => a.timestamp.localeCompare(b.timestamp)));
       })
-      .catch(() => {
-        store.logs = existingLogs;
-      })
+      .catch(() => undefined)
       .finally(() => {
         store.loaded = true;
         store.loading = undefined;
@@ -78,9 +77,19 @@ async function ensureLoaded() {
   await store.loading;
 }
 
-async function persistLog(entry: RequestLogEntry) {
+async function persistLogs() {
+  await ensureLoaded();
   await mkdir(LOG_DIR, { recursive: true });
-  await appendFile(LOG_FILE, `${JSON.stringify(entry)}\n`, "utf8");
+  const content = store.logs.map((entry) => JSON.stringify(entry)).join("\n");
+  await writeFile(LOG_FILE, content ? `${content}\n` : "", "utf8");
+}
+
+function schedulePersist() {
+  persistQueue = persistQueue
+    .catch(() => undefined)
+    .then(() => persistLogs())
+    .catch(() => undefined);
+  void persistQueue;
 }
 
 export function recordRequest(request: Request, status: number) {
@@ -95,7 +104,7 @@ export function recordRequest(request: Request, status: number) {
   };
 
   store.logs = trimLogs([...store.logs, entry]);
-  void persistLog(entry).catch(() => undefined);
+  schedulePersist();
 }
 
 export async function getRequestLogs(): Promise<RequestLogEntry[]> {
