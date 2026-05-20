@@ -9,6 +9,7 @@ import { SpotIcon } from "@/components/ToolIcons";
 import { InfoButton } from "@/components/ui/InfoButton";
 import { MetricCard } from "@/components/ui/MetricCard";
 import { CollapsibleSection } from "@/components/ui/CollapsibleSection";
+import { NumberInput } from "@/components/ui/NumberInput";
 import { calculateSpotFromApi } from "@/lib/api/spot-client";
 import { spotDefaultValues } from "@/lib/data/defaults";
 import { FINISHES, MIRROR_FINISHES } from "@/lib/data/finishes";
@@ -406,28 +407,28 @@ export function SpotCalculator() {
                   <FieldLabel infoKey="manualRatedWatt" labels={labels} info={info} onOpen={setModal}>
                     {labels.manualRatedWatt}
                   </FieldLabel>
-                  <input type="number" min="0" step="0.1" placeholder={inputPlaceholder("100 W")} value={String(values.manualRatedWatt ?? "")} onChange={(event) => updateField("manualRatedWatt", event.target.value)} />
+                  <NumberInput min="0" step="0.1" placeholder={inputPlaceholder("100 W")} value={String(values.manualRatedWatt ?? "")} onValueChange={(value) => updateField("manualRatedWatt", value)} />
                 </label>
                 <label className={fieldInvalid("manualSourceBeamMm")}>
                   <FieldLabel infoKey="manualSourceBeam" labels={labels} info={info} onOpen={setModal}>
                     {labelWithUnit(labels.manualSourceBeam, displayLengthUnit)}
                   </FieldLabel>
-                  <input type="number" min="0" step="0.01" placeholder={inputPlaceholder(unitSystem === "imperial" ? "0.315 in" : "8 mm")} value={displayLengthValue(values.manualSourceBeamMm, unitSystem, 4)} onChange={(event) => updateField("manualSourceBeamMm", parseLengthValue(event.target.value, unitSystem))} />
+                  <NumberInput min="0" step="0.01" placeholder={inputPlaceholder(unitSystem === "imperial" ? "0.315 in" : "8 mm")} value={displayLengthValue(values.manualSourceBeamMm, unitSystem, 4)} onValueChange={(value) => updateField("manualSourceBeamMm", parseLengthValue(value, unitSystem))} />
                 </label>
                 <label className={fieldInvalid("manualM2")}>
                   <FieldLabel infoKey="manualM2" labels={labels} info={info} onOpen={setModal}>{labels.manualM2}</FieldLabel>
-                  <input type="number" min="0" step="0.01" placeholder={inputPlaceholder("1.2")} value={String(values.manualM2 ?? "")} onChange={(event) => updateField("manualM2", event.target.value)} />
+                  <NumberInput min="0" step="0.01" placeholder={inputPlaceholder("1.2")} value={String(values.manualM2 ?? "")} onValueChange={(value) => updateField("manualM2", value)} />
                 </label>
               </>
             ) : null}
             <div className="field-row compact-row mobile-pair">
               <label className={fieldInvalid("measuredWatt")}>
                 <FieldLabel infoKey="measuredWatt" labels={labels} info={info} onOpen={setModal}>{labels.measuredWatt}</FieldLabel>
-                <input type="number" min="0" step="0.1" placeholder={inputPlaceholder("130 W")} value={String(values.measuredWatt ?? "")} onChange={(event) => updateField("measuredWatt", event.target.value)} />
+                <NumberInput min="0" step="0.1" placeholder={inputPlaceholder("130 W")} value={String(values.measuredWatt ?? "")} onValueChange={(value) => updateField("measuredWatt", value)} />
               </label>
               <label className={fieldInvalid("peakWatt")}>
                 <FieldLabel infoKey="peakWatt" labels={labels} info={info} onOpen={setModal}>{labels.peakWatt}</FieldLabel>
-                <input type="number" min="0" step="0.1" placeholder={inputPlaceholder("150 W")} value={String(values.peakWatt ?? "")} onChange={(event) => updateField("peakWatt", event.target.value)} />
+                <NumberInput min="0" step="0.1" placeholder={inputPlaceholder("150 W")} value={String(values.peakWatt ?? "")} onValueChange={(value) => updateField("peakWatt", value)} />
               </label>
             </div>
           </div>
@@ -449,7 +450,7 @@ export function SpotCalculator() {
                   </div>
                   <div className="range-wrap premium-range">
                     <input type="range" min="0" max="100" step="1" value={Number(values.powerPercent)} onChange={(event) => updateField("powerPercent", Number(event.target.value))} />
-                    <input type="number" min="0" max="100" step="1" placeholder={inputPlaceholder("65%")} value={String(values.powerPercent)} onChange={(event) => updateField("powerPercent", event.target.value)} />
+                    <NumberInput min="0" max="100" step="1" placeholder={inputPlaceholder("65%")} value={String(values.powerPercent)} onValueChange={(value) => updateField("powerPercent", value)} />
                   </div>
                   <div className="power-slider-scale">
                     <span>{labels.minPower} 0%</span>
@@ -461,7 +462,7 @@ export function SpotCalculator() {
               <div className="field-row compact-row">
                 <label className={fieldInvalid("ampValue")}>
                   <FieldLabel infoKey="ampValue" labels={labels} info={info} onOpen={setModal}>{labels.ampValue}</FieldLabel>
-                  <input type="number" min="0" step="0.1" placeholder={inputPlaceholder("30 mA")} value={String(values.ampValue ?? "")} onChange={(event) => updateField("ampValue", event.target.value)} />
+                  <NumberInput min="0" step="0.1" placeholder={inputPlaceholder("30 mA")} value={String(values.ampValue ?? "")} onValueChange={(value) => updateField("ampValue", value)} />
                 </label>
                 <label>
                   <FieldLabel infoKey="ampMeterType" labels={labels} info={info} onOpen={setModal}>{labels.ampMeterType}</FieldLabel>
@@ -474,7 +475,7 @@ export function SpotCalculator() {
               <div className={`pulse-stack ${fieldInvalid("hz") || ""}`}>
                 <label className={fieldInvalid("hz")}>
                   <FieldLabel infoKey="pulseHz" labels={labels} info={info} onOpen={setModal}>{labels.pulseHz}</FieldLabel>
-                  <input type="number" min="1" step="100" placeholder={inputPlaceholder("20000 Hz")} value={String(values.hz)} onChange={(event) => updateField("hz", event.target.value)} />
+                  <NumberInput min="1" step="100" placeholder={inputPlaceholder("20000 Hz")} value={String(values.hz)} onValueChange={(value) => updateField("hz", value)} />
                 </label>
                 <PulseHzGraph
                   hz={Number(values.hz) || 1}
@@ -508,13 +509,12 @@ export function SpotCalculator() {
                   <option value="custom">{labels.customFocalLength}</option>
                 </select>
                 {isCustomFocalLength ? (
-                  <input
-                    type="number"
+                  <NumberInput
                     min={MAX_PRESET_FOCAL_LENGTH_MM}
                     step="0.1"
                     placeholder={inputPlaceholder(unitSystem === "imperial" ? "10 in" : "254 mm")}
                     value={displayLengthValue(values.focalLength, unitSystem, 3)}
-                    onChange={(event) => updateField("focalLength", parseLengthValue(event.target.value, unitSystem))}
+                    onValueChange={(value) => updateField("focalLength", parseLengthValue(value, unitSystem))}
                   />
                 ) : null}
               </label>
@@ -577,13 +577,12 @@ export function SpotCalculator() {
                 </label>
                 <label className={fieldInvalid("mirrorTempC")}>
                   <FieldLabel infoKey="mirrorTempC" labels={labels} info={info} onOpen={setModal}>{labelWithUnit(labels.mirrorTempC, displayTemperatureUnit)}</FieldLabel>
-                  <input
-                    type="number"
+                  <NumberInput
                     min="0"
                     step="1"
                     placeholder={inputPlaceholder(unitSystem === "imperial" ? "95 F" : "35 C")}
                     value={displayTemperatureValue(values.mirrorTempC, unitSystem)}
-                    onChange={(event) => updateField("mirrorTempC", parseTemperatureValue(event.target.value, unitSystem))}
+                    onValueChange={(value) => updateField("mirrorTempC", parseTemperatureValue(value, unitSystem))}
                   />
                 </label>
               </div>
@@ -656,11 +655,11 @@ export function SpotCalculator() {
             <div className="field-row compact-row">
               <label className={fieldInvalid("beamCombinerTransmission")}>
                 <FieldLabel infoKey="beamCombinerTransmission" labels={labels} info={info} onOpen={setModal}>{labels.combinerTransmission}</FieldLabel>
-                <input type="number" min="0" max="100" step="0.1" placeholder={inputPlaceholder("97%")} value={String(values.beamCombinerTransmission)} onChange={(event) => updateField("beamCombinerTransmission", event.target.value)} disabled={values.beamCombinerPosition === "none"} />
+                <NumberInput min="0" max="100" step="0.1" placeholder={inputPlaceholder("97%")} value={String(values.beamCombinerTransmission)} onValueChange={(value) => updateField("beamCombinerTransmission", value)} disabled={values.beamCombinerPosition === "none"} />
               </label>
               <label className={fieldInvalid("beamCombinerDiameter")}>
                 <FieldLabel infoKey="beamCombinerDiameter" labels={labels} info={info} onOpen={setModal}>{labelWithUnit(labels.combinerDiameter, displayLengthUnit)}</FieldLabel>
-                <input type="number" min="0" step="0.1" placeholder={inputPlaceholder(unitSystem === "imperial" ? "0.79 in" : "20 mm")} value={displayLengthValue(values.beamCombinerDiameter, unitSystem, 3)} onChange={(event) => updateField("beamCombinerDiameter", parseLengthValue(event.target.value, unitSystem))} disabled={values.beamCombinerPosition === "none"} />
+                <NumberInput min="0" step="0.1" placeholder={inputPlaceholder(unitSystem === "imperial" ? "0.79 in" : "20 mm")} value={displayLengthValue(values.beamCombinerDiameter, unitSystem, 3)} onValueChange={(value) => updateField("beamCombinerDiameter", parseLengthValue(value, unitSystem))} disabled={values.beamCombinerPosition === "none"} />
               </label>
             </div>
           </CollapsibleSection>

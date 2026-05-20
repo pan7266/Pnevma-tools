@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useAppSettings } from "@/components/AppSettings";
 import { KerfIcon } from "@/components/ToolIcons";
 import { InfoButton } from "@/components/ui/InfoButton";
 import { MetricCard } from "@/components/ui/MetricCard";
+import { NumberInput } from "@/components/ui/NumberInput";
 import { calculateKerfAdvisor } from "@/lib/calculators/kerf";
 import {
   DEFAULT_OPTICAL_PROFILE,
@@ -38,7 +39,7 @@ function numberOrUndefined(value: string): number | undefined {
 }
 
 function thicknessStepFor(value: number): number {
-  return value < 1 ? 0.1 : 0.5;
+  return 0.01;
 }
 
 function roundThickness(value: number): number {
@@ -203,7 +204,19 @@ function CalibrationModeGraph({ mode, labels }: { mode: KerfCalibrationMode; lab
   );
 }
 
-function ThermalSelectionPanel({ operation, qualityGoal, labels }: { operation: KerfOperation | ""; qualityGoal: KerfQualityGoal | ""; labels: Record<string, string> }) {
+function ThermalSelectionPanel({
+  operation,
+  qualityGoal,
+  labels,
+  onOperationSelect,
+  onQualityGoalSelect,
+}: {
+  operation: KerfOperation | "";
+  qualityGoal: KerfQualityGoal | "";
+  labels: Record<string, string>;
+  onOperationSelect: (operation: KerfOperation) => void;
+  onQualityGoalSelect: (qualityGoal: KerfQualityGoal) => void;
+}) {
   const operationMeaning = operation ? labels[`operationMeaning_${operation}`] || labels.helpOperation : "";
   const qualityGoalMeaning = qualityGoal ? labels[`qualityGoalMeaning_${qualityGoal}`] || labels.helpQualityGoal : "";
   return (
@@ -221,8 +234,10 @@ function ThermalSelectionPanel({ operation, qualityGoal, labels }: { operation: 
           <ul>
             {KERF_OPERATIONS.map((item) => (
               <li key={item} className={operation === item ? "active" : undefined}>
-                <strong>{labels[item]}</strong>
-                <span>{labels[`operationMeaning_${item}`] || labels.helpOperation}</span>
+                <button type="button" className="selection-reference-button" onClick={() => onOperationSelect(item)}>
+                  <strong>{labels[item]}</strong>
+                  <span>{labels[`operationMeaning_${item}`] || labels.helpOperation}</span>
+                </button>
               </li>
             ))}
           </ul>
@@ -231,9 +246,11 @@ function ThermalSelectionPanel({ operation, qualityGoal, labels }: { operation: 
           <h3>{labels.qualityGoal}</h3>
           <ul>
             {KERF_QUALITY_GOALS.map((item) => (
-              <li key={item} className={qualityGoal === item ? "active" : undefined}>
-                <strong>{labels[item]}</strong>
-                <span>{labels[`qualityGoalMeaning_${item}`] || labels.helpQualityGoal}</span>
+              <li key={item} className={`${qualityGoal === item ? "active" : ""} ${!operation ? "disabled" : ""}`}>
+                <button type="button" className="selection-reference-button" disabled={!operation} onClick={() => onQualityGoalSelect(item)}>
+                  <strong>{labels[item]}</strong>
+                  <span>{labels[`qualityGoalMeaning_${item}`] || labels.helpQualityGoal}</span>
+                </button>
               </li>
             ))}
           </ul>
@@ -258,7 +275,9 @@ function ThermalSelectionPanel({ operation, qualityGoal, labels }: { operation: 
   );
 }
 
-function RequiredFieldsPanel({ items, labels }: { items: Array<{ label: string; complete: boolean; optional?: boolean }>; labels: Record<string, string> }) {
+type RequiredFieldItem = { label: string; complete: boolean; optional?: boolean; target?: string };
+
+function RequiredFieldsPanel({ items, labels, onJump }: { items: RequiredFieldItem[]; labels: Record<string, string>; onJump: (target: string) => void }) {
   const missing = items.filter((item) => !item.complete && !item.optional);
   return (
     <section className="mini-panel required-fields-panel">
@@ -267,9 +286,11 @@ function RequiredFieldsPanel({ items, labels }: { items: Array<{ label: string; 
       <ul>
         {items.map((item) => (
           <li key={item.label} className={item.complete ? "complete" : item.optional ? "optional" : "missing"}>
-            <span>{item.complete ? "OK" : item.optional ? "-" : "!"}</span>
-            {item.label}
-            {item.optional ? <small>{labels.optional || "optional"}</small> : null}
+            <button type="button" className="required-field-button" disabled={item.complete || item.optional || !item.target} onClick={() => item.target && onJump(item.target)}>
+              <span>{item.complete ? "OK" : item.optional ? "-" : "!"}</span>
+              {item.label}
+              {item.optional ? <small>{labels.optional || "optional"}</small> : null}
+            </button>
           </li>
         ))}
       </ul>
@@ -300,6 +321,8 @@ export function KerfAdvisor() {
   const [cutLines, setCutLines] = useState("");
   const [jsonData, setJsonData] = useState("");
   const [infoModal, setInfoModal] = useState<{ title: string; body: string } | null>(null);
+  const [highlightedField, setHighlightedField] = useState("");
+  const highlightTimerRef = useRef<number | null>(null);
 
   useEffect(() => {
     const savedProfiles = loadJsonArray<OpticalProfile>(KERF_STORAGE_KEYS.opticalProfiles);
@@ -316,6 +339,12 @@ export function KerfAdvisor() {
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [infoModal]);
+
+  useEffect(() => {
+    return () => {
+      if (highlightTimerRef.current) window.clearTimeout(highlightTimerRef.current);
+    };
+  }, []);
 
   const selectedMaterial = KERF_MATERIALS.find((material) => material.id === materialId) || KERF_MATERIALS[0];
   const selectedProfile = profiles.find((profile) => profile.id === selectedProfileId) || profiles[0] || DEFAULT_OPTICAL_PROFILE;
@@ -353,15 +382,31 @@ export function KerfAdvisor() {
   const thicknessStep = thicknessStepFor(thicknessMm);
   const help = (key: string, fallback: string) => labels[key] || fallback;
   const requiredFields = [
-    { label: labels.opticalProfile, complete: Boolean(selectedProfileId) },
-    { label: labels.materialPreset, complete: Boolean(materialId) },
-    { label: labels.subtype, complete: Boolean(subtype) },
-    { label: `${labels.thickness} (mm)`, complete: validThickness },
-    { label: labels.operation, complete: Boolean(operation) },
-    { label: labels.qualityGoal, complete: Boolean(qualityGoal) },
+    { label: labels.opticalProfile, complete: Boolean(selectedProfileId), target: "optical-profile" },
+    { label: labels.materialPreset, complete: Boolean(materialId), target: "material-preset" },
+    { label: labels.subtype, complete: Boolean(subtype), target: "subtype" },
+    { label: `${labels.thickness} (mm)`, complete: validThickness, target: "thickness" },
+    { label: labels.operation, complete: Boolean(operation), target: "operation" },
+    { label: labels.qualityGoal, complete: Boolean(qualityGoal), target: "quality-goal" },
     { label: labels.airAssist, complete: true, optional: true },
     { label: labels.extraction, complete: extraction, optional: true },
   ];
+
+  function fieldClass(target: string) {
+    return `field-control ${highlightedField === target ? "required-target-highlight" : ""}`;
+  }
+
+  function jumpToRequiredField(target: string) {
+    setHighlightedField(target);
+    if (highlightTimerRef.current) window.clearTimeout(highlightTimerRef.current);
+    highlightTimerRef.current = window.setTimeout(() => setHighlightedField(""), 2200);
+    window.requestAnimationFrame(() => {
+      const element = document.querySelector<HTMLElement>(`[data-required-field="${target}"]`);
+      element?.scrollIntoView({ behavior: "smooth", block: "center" });
+      const control = element?.querySelector<HTMLElement>("select, input, textarea, button");
+      control?.focus();
+    });
+  }
 
   function chooseMaterial(nextId: string) {
     if (!nextId) {
@@ -442,7 +487,7 @@ export function KerfAdvisor() {
           <aside className="stack">
               <section className="mini-panel">
                 <h2>{labels.opticalProfile}</h2>
-                <div className="field-control">
+                <div className={fieldClass("optical-profile")} data-required-field="optical-profile">
                   <InfoLabel label={labels.opticalProfile} body={help("helpOpticalProfile", labels.importProfile)} onOpen={setInfoModal} />
                   <select value={selectedProfileId} onChange={(event) => setSelectedProfileId(event.target.value)}>
                     {profiles.map((profile) => <option key={profile.id} value={profile.id}>{opticalProfileOptionLabel(profile, labels)}</option>)}
@@ -463,14 +508,14 @@ export function KerfAdvisor() {
               <section className="mini-panel">
                 <h2>{labels.materialPreset}</h2>
                 <div className="kerf-three-column-row">
-                  <div className="field-control">
+                  <div className={fieldClass("material-preset")} data-required-field="material-preset">
                     <InfoLabel label={labels.materialPreset} body={help("helpMaterialPreset", labels.opticalIndicatorNotice)} onOpen={setInfoModal} />
                     <select value={materialId} onChange={(event) => chooseMaterial(event.target.value)}>
                       <option value="">{labels.selectMaterial}</option>
                       {KERF_MATERIALS.map((material) => <option key={material.id} value={material.id}>{labels[material.labelKey]}</option>)}
                     </select>
                   </div>
-                  <div className="field-control">
+                  <div className={fieldClass("subtype")} data-required-field="subtype">
                     <InfoLabel label={labels.subtype} body={help("helpSubtype", labels.opticalIndicatorNotice)} onOpen={setInfoModal} />
                     <select value={subtype} disabled={!materialId} onChange={(event) => {
                       const next = event.currentTarget.value as KerfMaterialFamily | "";
@@ -481,9 +526,9 @@ export function KerfAdvisor() {
                       {materialId ? selectedMaterial.subtypes.map((item) => <option key={item} value={item}>{labels[item] || item}</option>) : null}
                     </select>
                   </div>
-                  <div className="field-control">
+                  <div className={fieldClass("thickness")} data-required-field="thickness">
                     <InfoLabel label={`${labels.thickness} (mm)`} body={help("helpThickness", labels.opticalIndicatorNotice)} onOpen={setInfoModal} />
-                    <input type="number" min="0.01" step={thicknessStep} value={thicknessMm} onChange={(event) => setThicknessMm(Number(event.target.value))} onBlur={() => setThicknessMm((current) => roundThickness(current))} />
+                    <NumberInput min="0.01" step={thicknessStep} value={Number.isFinite(thicknessMm) ? thicknessMm : ""} onValueChange={(value) => setThicknessMm(value === "" ? Number.NaN : Number(value))} onBlur={() => setThicknessMm((current) => roundThickness(current))} />
                   </div>
                 </div>
               </section>
@@ -491,14 +536,14 @@ export function KerfAdvisor() {
               <section className="mini-panel">
                 <h2>{labels.operation}</h2>
                 <div className="kerf-three-column-row">
-                  <div className="field-control">
+                  <div className={fieldClass("operation")} data-required-field="operation">
                     <InfoLabel label={labels.operation} body={help("helpOperation", labels.opticalIndicatorNotice)} onOpen={setInfoModal} />
                     <select value={operation} onChange={(event) => chooseOperation(event.target.value as KerfOperation | "")}>
                       <option value="">{labels.selectOperation}</option>
                       {KERF_OPERATIONS.map((item) => <option key={item} value={item}>{labels[item]}</option>)}
                     </select>
                   </div>
-                  <div className="field-control">
+                  <div className={fieldClass("quality-goal")} data-required-field="quality-goal">
                     <InfoLabel label={labels.qualityGoal} body={help("helpQualityGoal", labels.opticalIndicatorNotice)} onOpen={setInfoModal} />
                     <select value={qualityGoal} disabled={!operation} onChange={(event) => setQualityGoal(event.target.value as KerfQualityGoal | "")}>
                       <option value="">{operation ? selectQualityGoalLabel : selectOperationFirstLabel}</option>
@@ -516,7 +561,7 @@ export function KerfAdvisor() {
                   <input type="checkbox" checked={extraction} onChange={(event) => setExtraction(event.target.checked)} />
                   <InfoLabel label={labels.extraction} body={help("helpExtraction", labels.opticalIndicatorNotice)} onOpen={setInfoModal} />
                 </div>
-                <ThermalSelectionPanel operation={operation} qualityGoal={qualityGoal} labels={labels} />
+                <ThermalSelectionPanel operation={operation} qualityGoal={qualityGoal} labels={labels} onOperationSelect={chooseOperation} onQualityGoalSelect={setQualityGoal} />
               </section>
 
               <details className="mini-panel advanced-kerf-section">
@@ -529,14 +574,14 @@ export function KerfAdvisor() {
                   <span className="field-hint">{labels[`calibrationModeMeaning_${calibrationMode}`] || labels.helpCalibrationMode}</span>
                 </div>
                 <div className="field-row compact-row">
-                  <div className="field-control"><InfoLabel label={`${labels.topKerf} (mm)`} body={help("helpTopKerf", labels.measuredKerf)} onOpen={setInfoModal} /><input type="number" step="0.001" value={topKerf} onChange={(event) => setTopKerf(event.target.value)} /></div>
-                  <div className="field-control"><InfoLabel label={`${labels.bottomKerf} (mm)`} body={help("helpBottomKerf", labels.measuredKerf)} onOpen={setInfoModal} /><input type="number" step="0.001" value={bottomKerf} onChange={(event) => setBottomKerf(event.target.value)} /></div>
+                  <div className="field-control"><InfoLabel label={`${labels.topKerf} (mm)`} body={help("helpTopKerf", labels.measuredKerf)} onOpen={setInfoModal} /><NumberInput step="0.001" value={topKerf} onValueChange={setTopKerf} /></div>
+                  <div className="field-control"><InfoLabel label={`${labels.bottomKerf} (mm)`} body={help("helpBottomKerf", labels.measuredKerf)} onOpen={setInfoModal} /><NumberInput step="0.001" value={bottomKerf} onValueChange={setBottomKerf} /></div>
                 </div>
-                <div className="field-control"><InfoLabel label={`${labels.averageKerf} (mm)`} body={help("helpAverageKerf", labels.measuredKerf)} onOpen={setInfoModal} /><input type="number" step="0.001" value={averageKerf} onChange={(event) => setAverageKerf(event.target.value)} /></div>
+                <div className="field-control"><InfoLabel label={`${labels.averageKerf} (mm)`} body={help("helpAverageKerf", labels.measuredKerf)} onOpen={setInfoModal} /><NumberInput step="0.001" value={averageKerf} onValueChange={setAverageKerf} /></div>
                 <div className="field-row compact-row">
-                  <div className="field-control"><InfoLabel label={`${labels.designedWidth} (mm)`} body={help("helpDesignedWidth", labels.calibrationTest)} onOpen={setInfoModal} /><input type="number" step="0.01" value={designedWidth} onChange={(event) => setDesignedWidth(event.target.value)} /></div>
-                  <div className="field-control"><InfoLabel label={`${labels.measuredWidth} (mm)`} body={help("helpMeasuredWidth", labels.calibrationTest)} onOpen={setInfoModal} /><input type="number" step="0.01" value={measuredWidth} onChange={(event) => setMeasuredWidth(event.target.value)} /></div>
-                  <div className="field-control"><InfoLabel label={labels.cutLines} body={help("helpCutLines", labels.calibrationTest)} onOpen={setInfoModal} /><input type="number" step="1" value={cutLines} onChange={(event) => setCutLines(event.target.value)} /></div>
+                  <div className="field-control"><InfoLabel label={`${labels.designedWidth} (mm)`} body={help("helpDesignedWidth", labels.calibrationTest)} onOpen={setInfoModal} /><NumberInput step="0.01" value={designedWidth} onValueChange={setDesignedWidth} /></div>
+                  <div className="field-control"><InfoLabel label={`${labels.measuredWidth} (mm)`} body={help("helpMeasuredWidth", labels.calibrationTest)} onOpen={setInfoModal} /><NumberInput step="0.01" value={measuredWidth} onValueChange={setMeasuredWidth} /></div>
+                  <div className="field-control"><InfoLabel label={labels.cutLines} body={help("helpCutLines", labels.calibrationTest)} onOpen={setInfoModal} /><NumberInput step="1" value={cutLines} onValueChange={setCutLines} /></div>
                 </div>
                 <CalibrationModeGraph mode={calibrationMode} labels={labels} />
                 <article className="info-box better-results-panel">
@@ -596,7 +641,7 @@ export function KerfAdvisor() {
           </section>
           ) : (
             <section className="stack kerf-results-empty kerf-results-rail" aria-live="polite">
-              <RequiredFieldsPanel items={requiredFields} labels={labels} />
+              <RequiredFieldsPanel items={requiredFields} labels={labels} onJump={jumpToRequiredField} />
             </section>
           )}
         </div>

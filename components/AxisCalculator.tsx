@@ -6,6 +6,7 @@ import { useAppSettings } from "@/components/AppSettings";
 import { AxisIcon } from "@/components/ToolIcons";
 import { InfoButton } from "@/components/ui/InfoButton";
 import { MetricCard } from "@/components/ui/MetricCard";
+import { NumberInput } from "@/components/ui/NumberInput";
 import { calculateAxisFromApi } from "@/lib/api/axis-client";
 import { calculateAxisMechanics } from "@/lib/calculators/axis";
 import { axisDefaultValues } from "@/lib/data/defaults";
@@ -99,13 +100,12 @@ function Field({
         {label}
         <InfoButton title={label} body={description} onOpen={onInfo} />
       </span>
-      <input
-        type="number"
+      <NumberInput
         min="0"
         step={step}
         placeholder={placeholder ? inputPlaceholder(placeholder) : undefined}
         value={value === null || value === undefined ? "" : String(value)}
-        onChange={(event) => onChange(event.target.value)}
+        onValueChange={onChange}
       />
       <span className="field-hint">{description}</span>
     </label>

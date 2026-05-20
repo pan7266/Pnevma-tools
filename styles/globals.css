@@ -543,7 +543,7 @@ input::placeholder {
 
 .range-wrap {
   display: grid;
-  grid-template-columns: 1fr 72px;
+  grid-template-columns: 1fr minmax(104px, 120px);
   gap: 10px;
   align-items: center;
 }
@@ -583,6 +583,57 @@ input[type="range"] {
   height: 42px;
   padding: 0;
   accent-color: var(--primary);
+}
+
+.number-control {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 38px;
+  gap: 5px;
+  width: 100%;
+}
+
+.number-control input {
+  min-width: 0;
+  padding-right: 8px;
+  appearance: textfield;
+}
+
+.number-control input::-webkit-outer-spin-button,
+.number-control input::-webkit-inner-spin-button {
+  margin: 0;
+  appearance: none;
+}
+
+.number-stepper {
+  display: grid;
+  grid-template-rows: 1fr 1fr;
+  gap: 4px;
+}
+
+.number-stepper button {
+  display: grid;
+  place-items: center;
+  min-width: 38px;
+  min-height: 19px;
+  border: 1px solid var(--field-line);
+  border-radius: 7px;
+  color: var(--ink);
+  background: var(--panel-solid);
+  cursor: pointer;
+  font-size: 0.76rem;
+  font-weight: 950;
+  line-height: 1;
+}
+
+.number-stepper button:hover,
+.number-stepper button:focus-visible {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.number-stepper button:disabled {
+  opacity: 0.42;
+  cursor: not-allowed;
 }
 
 .button-row {
@@ -1810,16 +1861,41 @@ th {
 
 .selection-reference-grid li {
   display: grid;
-  gap: 3px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  padding: 8px 9px;
   background: var(--field);
+  overflow: hidden;
 }
 
 .selection-reference-grid li.active {
   border-color: color-mix(in srgb, var(--primary) 55%, var(--line));
   background: color-mix(in srgb, var(--primary) 9%, var(--field));
+}
+
+.selection-reference-grid li.disabled {
+  opacity: 0.58;
+}
+
+.selection-reference-button {
+  display: grid;
+  gap: 3px;
+  width: 100%;
+  min-height: 100%;
+  border: 0;
+  padding: 8px 9px;
+  color: inherit;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.selection-reference-button:hover,
+.selection-reference-button:focus-visible {
+  background: color-mix(in srgb, var(--primary) 8%, transparent);
+}
+
+.selection-reference-button:disabled {
+  cursor: not-allowed;
 }
 
 .selection-reference-grid strong {
@@ -1841,21 +1917,39 @@ th {
 }
 
 .required-fields-panel li {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--muted);
+  background: var(--field);
+  overflow: hidden;
+}
+
+.required-field-button {
   display: grid;
   grid-template-columns: 34px minmax(0, 1fr) auto;
   align-items: center;
   gap: 8px;
+  width: 100%;
   min-height: 36px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
+  border: 0;
   padding: 5px 8px;
-  color: var(--muted);
-  background: var(--field);
+  color: inherit;
+  background: transparent;
   font-size: 0.82rem;
   font-weight: 850;
+  text-align: left;
 }
 
-.required-fields-panel li > span {
+.required-field-button:not(:disabled) {
+  cursor: pointer;
+}
+
+.required-field-button:not(:disabled):hover,
+.required-field-button:not(:disabled):focus-visible {
+  background: color-mix(in srgb, var(--beam) 9%, transparent);
+}
+
+.required-field-button > span {
   display: inline-grid;
   place-items: center;
   min-width: 28px;
@@ -1871,17 +1965,35 @@ th {
   border-color: color-mix(in srgb, var(--green) 42%, var(--line));
 }
 
-.required-fields-panel li.complete > span {
+.required-fields-panel li.complete .required-field-button > span {
   color: var(--green);
 }
 
-.required-fields-panel li.missing > span {
+.required-fields-panel li.missing .required-field-button > span {
   color: var(--beam);
 }
 
 .required-fields-panel small {
   color: var(--muted);
   font-size: 0.7rem;
+}
+
+.required-target-highlight {
+  border-radius: 8px;
+  outline: 2px solid color-mix(in srgb, var(--beam) 76%, var(--primary));
+  outline-offset: 4px;
+  animation: requiredFieldPulse 1.05s ease-in-out 2;
+}
+
+@keyframes requiredFieldPulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--beam) 0%, transparent);
+  }
+
+  50% {
+    box-shadow: 0 0 0 7px color-mix(in srgb, var(--beam) 18%, transparent);
+  }
 }
 
 .kerf-beam-graph .graph {
