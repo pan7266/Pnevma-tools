@@ -10,6 +10,7 @@ export interface SourcePreset {
   excitation: "DC" | "RF" | string;
   ratedWatt: number;
   peakWatt?: number;
+  maxPowerW?: number;
   beamMm: number;
   tolerance: string;
   m2: number;
@@ -22,6 +23,7 @@ export interface SourcePreset {
   tubeLengthMm?: number;
   tubeDiameterMm?: number;
   currentBestMa?: number;
+  currentBestLabel?: string;
   currentMinMa?: number;
   currentEstimated?: boolean;
 }

@@ -240,7 +240,7 @@ export const en: LocalePack = {
     opticalTaperExplain: "Optical taper tendency compares top, middle, and bottom beam diameters. It is not a real-world taper angle.",
     confidenceExplainTitle: "Confidence logic",
     confidenceExplainBody: "Confidence increases with matching optical profiles, known material subtype, preset thickness, and measured kerf. It drops for coated, unknown, or uncalibrated materials.",
-    thermalSelectionTitle: "Thermal effect of this selection",
+    thermalSelectionTitle: "Operation Details and Thermal effect",
     calibrationDiagramTitle: "Calibration diagram",
     profileDetails: "Profile details",
     materialPreset: "Material preset",

@@ -8,7 +8,17 @@ interface InfoButtonProps {
 
 export function InfoButton({ title, body, onOpen }: InfoButtonProps) {
   return (
-    <button className="info-button" type="button" aria-label={title} title={title} onClick={() => onOpen({ title, body })}>
+    <button
+      className="info-button"
+      type="button"
+      aria-label={title}
+      title={title}
+      onClick={(event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        onOpen({ title, body });
+      }}
+    >
       i
     </button>
   );

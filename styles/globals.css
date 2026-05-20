@@ -456,7 +456,8 @@ details[open] > summary::after {
   align-items: stretch;
 }
 
-label {
+label,
+.field-control {
   display: grid;
   gap: 6px;
   color: var(--ink);
@@ -652,10 +653,24 @@ input[type="range"] {
   background: var(--panel-solid);
 }
 
+.metric-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+}
+
 .metric span {
   color: var(--muted);
   font-size: 0.78rem;
   font-weight: 850;
+}
+
+.metric-label-row .info-button {
+  width: 20px;
+  height: 20px;
+  font-size: 0.72rem;
 }
 
 .metric strong {
@@ -1681,6 +1696,194 @@ th {
   align-items: start;
 }
 
+.kerf-results-rail {
+  position: sticky;
+  top: 14px;
+  max-height: calc(100vh - 28px);
+  overflow: auto;
+  align-self: start;
+  padding-right: 2px;
+}
+
+.kerf-three-column-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  align-items: end;
+}
+
+.checkbox-line {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  width: max-content;
+  max-width: 100%;
+  margin-top: 10px;
+}
+
+.checkbox-line input {
+  width: auto;
+  min-height: auto;
+  accent-color: var(--primary);
+}
+
+.extraction-check-row {
+  width: max-content;
+  max-width: 100%;
+  margin-top: 10px;
+}
+
+.nested-details {
+  margin-top: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--panel-solid) 82%, var(--panel));
+  user-select: none;
+}
+
+.nested-details > summary,
+.thermal-selection-panel > summary,
+.advanced-kerf-section > summary {
+  min-height: 40px;
+  padding: 0 11px;
+}
+
+.nested-details[open],
+.thermal-selection-panel[open],
+.advanced-kerf-section[open] {
+  display: grid;
+  gap: 10px;
+}
+
+.nested-details[open] {
+  padding: 0 11px 11px;
+}
+
+.thermal-selection-panel,
+.advanced-kerf-section {
+  margin-top: 10px;
+  padding: 0;
+  overflow: hidden;
+}
+
+.thermal-selection-panel[open],
+.advanced-kerf-section[open] {
+  padding-bottom: 13px;
+}
+
+.thermal-selection-panel[open] > p,
+.thermal-selection-panel[open] > .selection-summary-grid,
+.thermal-selection-panel[open] > .selection-reference-grid,
+.thermal-selection-panel[open] > svg,
+.advanced-kerf-section[open] > .field-control,
+.advanced-kerf-section[open] > .field-row,
+.advanced-kerf-section[open] > .graph-panel,
+.advanced-kerf-section[open] > .info-box {
+  width: calc(100% - 26px);
+  margin-left: 13px;
+  margin-right: 13px;
+}
+
+.selection-summary-grid {
+  display: grid;
+  gap: 6px;
+}
+
+.selection-reference-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.selection-reference-grid h3 {
+  margin: 0 0 8px;
+  font-size: 0.84rem;
+}
+
+.selection-reference-grid ul {
+  display: grid;
+  gap: 7px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.selection-reference-grid li {
+  display: grid;
+  gap: 3px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 8px 9px;
+  background: var(--field);
+}
+
+.selection-reference-grid li.active {
+  border-color: color-mix(in srgb, var(--primary) 55%, var(--line));
+  background: color-mix(in srgb, var(--primary) 9%, var(--field));
+}
+
+.selection-reference-grid strong {
+  font-size: 0.78rem;
+}
+
+.selection-reference-grid span {
+  color: var(--muted);
+  font-size: 0.72rem;
+  line-height: 1.35;
+}
+
+.required-fields-panel ul {
+  display: grid;
+  gap: 8px;
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.required-fields-panel li {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 5px 8px;
+  color: var(--muted);
+  background: var(--field);
+  font-size: 0.82rem;
+  font-weight: 850;
+}
+
+.required-fields-panel li > span {
+  display: inline-grid;
+  place-items: center;
+  min-width: 28px;
+  height: 24px;
+  border-radius: 999px;
+  color: var(--ink);
+  background: var(--panel-solid);
+  font-size: 0.68rem;
+}
+
+.required-fields-panel li.complete {
+  color: var(--ink);
+  border-color: color-mix(in srgb, var(--green) 42%, var(--line));
+}
+
+.required-fields-panel li.complete > span {
+  color: var(--green);
+}
+
+.required-fields-panel li.missing > span {
+  color: var(--beam);
+}
+
+.required-fields-panel small {
+  color: var(--muted);
+  font-size: 0.7rem;
+}
+
 .kerf-beam-graph .graph {
   min-height: 260px;
 }
@@ -1702,7 +1905,7 @@ th {
   display: block;
   width: 100%;
   height: auto;
-  margin-top: 8px;
+  margin-top: 0;
 }
 
 .notes-output {
@@ -1839,6 +2042,7 @@ th {
   .field-row,
   .readouts,
   .panels,
+  .kerf-three-column-row,
   .toolbar,
   .spot-source-toolbar,
   .spot-source-row,
@@ -1846,6 +2050,17 @@ th {
   .kerf-grid,
   .wizard-steps,
   .optic-split {
+    grid-template-columns: 1fr;
+  }
+
+  .kerf-results-rail {
+    position: static;
+    max-height: none;
+    overflow: visible;
+    padding-right: 0;
+  }
+
+  .selection-reference-grid {
     grid-template-columns: 1fr;
   }
 

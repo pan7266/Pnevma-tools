@@ -91,12 +91,16 @@ function BeamMaterialGraph({ result, thicknessMm, labels }: { result: KerfAdviso
   const maxDiameter = Math.max(result.topDiameterMm, result.middleDiameterMm, result.bottomDiameterMm, 0.01);
   const scale = 56 / maxDiameter;
   const focusY = slab.y + clamp(result.recommendedFocusDepthMm / Math.max(thicknessMm, 0.001), -0.28, 1.2) * slab.h;
+  const lensY = 10;
+  const lensHalf = 34;
+  const beyondExitY = slab.y + slab.h + 20;
+  const focusLineY = clamp(focusY, lensY + 12, beyondExitY - 8);
   const topHalf = clamp((result.topDiameterMm * scale) / 2, 3, 56);
-  const midHalf = clamp((result.middleDiameterMm * scale) / 2, 3, 56);
   const bottomHalf = clamp((result.bottomDiameterMm * scale) / 2, 3, 56);
+  const exitHalf = clamp(bottomHalf * 1.1, 4, 62);
   const cx = slab.x + slab.w / 2;
-  const pathLeft = `M${cx - topHalf} ${slab.y} C${cx - midHalf} ${slab.y + slab.h * 0.32} ${cx - 4} ${focusY} ${cx - 3} ${focusY} C${cx - midHalf} ${slab.y + slab.h * 0.68} ${cx - bottomHalf} ${slab.y + slab.h} ${cx - bottomHalf} ${slab.y + slab.h}`;
-  const pathRight = `M${cx + topHalf} ${slab.y} C${cx + midHalf} ${slab.y + slab.h * 0.32} ${cx + 4} ${focusY} ${cx + 3} ${focusY} C${cx + midHalf} ${slab.y + slab.h * 0.68} ${cx + bottomHalf} ${slab.y + slab.h} ${cx + bottomHalf} ${slab.y + slab.h}`;
+  const leftPoints = `${cx - lensHalf},${lensY} ${cx - topHalf},${slab.y} ${cx - 4},${focusLineY} ${cx - bottomHalf},${slab.y + slab.h} ${cx - exitHalf},${beyondExitY}`;
+  const rightPoints = `${cx + lensHalf},${lensY} ${cx + topHalf},${slab.y} ${cx + 4},${focusLineY} ${cx + bottomHalf},${slab.y + slab.h} ${cx + exitHalf},${beyondExitY}`;
 
   return (
     <div className="graph-panel kerf-beam-graph">
@@ -107,17 +111,19 @@ function BeamMaterialGraph({ result, thicknessMm, labels }: { result: KerfAdviso
         </div>
       </div>
       <svg className="graph" viewBox={`0 0 ${width} ${height}`} role="img" aria-label={labels.beamThroughMaterial}>
+        <line x1={cx - lensHalf} x2={cx + lensHalf} y1={lensY} y2={lensY} stroke="var(--ink)" strokeWidth="3" strokeLinecap="round" />
+        <text x={cx} y={lensY + 18} fill="var(--muted)" fontSize="11" textAnchor="middle">{labels.lensFocalLength}</text>
         <rect x={slab.x} y={slab.y} width={slab.w} height={slab.h} rx="8" fill="color-mix(in srgb, var(--primary) 8%, var(--panel-solid))" stroke="var(--line)" />
         <line x1={slab.x - 34} x2={slab.x + slab.w + 34} y1={slab.y} y2={slab.y} stroke="var(--axis)" />
         <line x1={slab.x - 34} x2={slab.x + slab.w + 34} y1={slab.y + slab.h} y2={slab.y + slab.h} stroke="var(--axis)" />
-        <path d={pathLeft} fill="none" stroke="var(--beam)" strokeWidth="2" />
-        <path d={pathRight} fill="none" stroke="var(--beam)" strokeWidth="2" />
-        <line x1={cx - 72} x2={cx + 72} y1={focusY} y2={focusY} stroke="var(--green)" strokeDasharray="5 6" />
-        <circle cx={cx} cy={focusY} r="5" fill="var(--green)" />
+        <polyline points={leftPoints} fill="none" stroke="var(--beam)" strokeWidth="2" strokeLinejoin="round" />
+        <polyline points={rightPoints} fill="none" stroke="var(--beam)" strokeWidth="2" strokeLinejoin="round" />
+        <line x1={cx - 72} x2={cx + 72} y1={focusLineY} y2={focusLineY} stroke="var(--green)" strokeDasharray="5 6" />
+        <circle cx={cx} cy={focusLineY} r="5" fill="var(--green)" />
         <text x={slab.x - 52} y={slab.y + 5} fill="var(--ink)" fontSize="12" textAnchor="end">{labels.topSurface}</text>
         <text x={slab.x - 52} y={slab.y + slab.h / 2 + 4} fill="var(--ink)" fontSize="12" textAnchor="end">{labels.middle}</text>
         <text x={slab.x - 52} y={slab.y + slab.h + 5} fill="var(--ink)" fontSize="12" textAnchor="end">{labels.bottomExit}</text>
-        <text x={slab.x + slab.w + 48} y={focusY + 4} fill="var(--green)" fontSize="12">{labels.focusDepth}: {result.recommendedFocusDepthMm.toFixed(2)} mm</text>
+        <text x={slab.x + slab.w + 48} y={focusLineY + 4} fill="var(--green)" fontSize="12">{labels.focusDepth}: {result.recommendedFocusDepthMm.toFixed(2)} mm</text>
         <text x={slab.x + slab.w + 48} y={slab.y + 6} fill="var(--muted)" fontSize="11">{result.topDiameterMm.toFixed(4)} mm</text>
         <text x={slab.x + slab.w + 48} y={slab.y + slab.h / 2 + 4} fill="var(--muted)" fontSize="11">{result.middleDiameterMm.toFixed(4)} mm</text>
         <text x={slab.x + slab.w + 48} y={slab.y + slab.h + 5} fill="var(--muted)" fontSize="11">{result.bottomDiameterMm.toFixed(4)} mm</text>
@@ -197,28 +203,77 @@ function CalibrationModeGraph({ mode, labels }: { mode: KerfCalibrationMode; lab
   );
 }
 
-function ThermalSelectionPanel({ operation, qualityGoal, labels }: { operation: KerfOperation; qualityGoal: KerfQualityGoal; labels: Record<string, string> }) {
-  const operationMeaning = labels[`operationMeaning_${operation}`] || labels.helpOperation;
-  const qualityGoalMeaning = labels[`qualityGoalMeaning_${qualityGoal}`] || labels.helpQualityGoal;
+function ThermalSelectionPanel({ operation, qualityGoal, labels }: { operation: KerfOperation | ""; qualityGoal: KerfQualityGoal | ""; labels: Record<string, string> }) {
+  const operationMeaning = operation ? labels[`operationMeaning_${operation}`] || labels.helpOperation : "";
+  const qualityGoalMeaning = qualityGoal ? labels[`qualityGoalMeaning_${qualityGoal}`] || labels.helpQualityGoal : "";
   return (
-    <article className="mini-panel thermal-selection-panel">
-      <h2>{labels.thermalSelectionTitle}</h2>
-      <p className="small"><strong>{labels[operation]}:</strong> {operationMeaning}</p>
-      <p className="small"><strong>{labels[qualityGoal]}:</strong> {qualityGoalMeaning}</p>
-      <svg viewBox="0 0 520 92" role="img" aria-label={labels.thermalSelectionTitle}>
-        <rect x="28" y="38" width="360" height="16" rx="8" fill="url(#kerfHeatGradient)" />
-        <defs>
-          <linearGradient id="kerfHeatGradient" x1="0" x2="1">
-            <stop offset="0" stopColor="var(--green)" />
-            <stop offset="0.55" stopColor="var(--amber)" />
-            <stop offset="1" stopColor="var(--beam)" />
-          </linearGradient>
-        </defs>
-        <text x="28" y="74" fill="var(--muted)" fontSize="11">{labels.clean_top_edge}</text>
-        <text x="388" y="74" fill="var(--muted)" fontSize="11" textAnchor="end">{labels.clean_bottom_exit}</text>
-        <circle cx={qualityGoal === "clean_bottom_exit" ? 330 : qualityGoal === "fast_production" ? 360 : qualityGoal === "minimum_taper" ? 220 : 120} cy="46" r="8" fill="var(--ink)" />
-      </svg>
-    </article>
+    <details className="mini-panel thermal-selection-panel">
+      <summary>{labels.thermalSelectionTitle}</summary>
+      {operation || qualityGoal ? (
+        <div className="selection-summary-grid">
+          {operation ? <p className="small"><strong>{labels[operation]}:</strong> {operationMeaning}</p> : null}
+          {qualityGoal ? <p className="small"><strong>{labels[qualityGoal]}:</strong> {qualityGoalMeaning}</p> : null}
+        </div>
+      ) : null}
+      <div className="selection-reference-grid">
+        <section>
+          <h3>{labels.operation}</h3>
+          <ul>
+            {KERF_OPERATIONS.map((item) => (
+              <li key={item} className={operation === item ? "active" : undefined}>
+                <strong>{labels[item]}</strong>
+                <span>{labels[`operationMeaning_${item}`] || labels.helpOperation}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+        <section>
+          <h3>{labels.qualityGoal}</h3>
+          <ul>
+            {KERF_QUALITY_GOALS.map((item) => (
+              <li key={item} className={qualityGoal === item ? "active" : undefined}>
+                <strong>{labels[item]}</strong>
+                <span>{labels[`qualityGoalMeaning_${item}`] || labels.helpQualityGoal}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      </div>
+      {qualityGoal ? (
+        <svg viewBox="0 0 520 74" role="img" aria-label={labels.thermalSelectionTitle}>
+          <rect x="28" y="28" width="360" height="14" rx="7" fill="url(#kerfHeatGradient)" />
+          <defs>
+            <linearGradient id="kerfHeatGradient" x1="0" x2="1">
+              <stop offset="0" stopColor="var(--green)" />
+              <stop offset="0.55" stopColor="var(--amber)" />
+              <stop offset="1" stopColor="var(--beam)" />
+            </linearGradient>
+          </defs>
+          <text x="28" y="61" fill="var(--muted)" fontSize="10">{labels.clean_top_edge}</text>
+          <text x="388" y="61" fill="var(--muted)" fontSize="10" textAnchor="end">{labels.clean_bottom_exit}</text>
+          <circle cx={qualityGoal === "clean_bottom_exit" ? 330 : qualityGoal === "fast_production" ? 360 : qualityGoal === "minimum_taper" ? 220 : 120} cy="35" r="7" fill="var(--ink)" />
+        </svg>
+      ) : null}
+    </details>
+  );
+}
+
+function RequiredFieldsPanel({ items, labels }: { items: Array<{ label: string; complete: boolean; optional?: boolean }>; labels: Record<string, string> }) {
+  const missing = items.filter((item) => !item.complete && !item.optional);
+  return (
+    <section className="mini-panel required-fields-panel">
+      <h2>{labels.requiredFields || "Required fields"}</h2>
+      <p className="small">{missing.length ? (labels.requiredFieldsBody || "Complete these fields to show the focus recommendation.") : (labels.requiredFieldsComplete || "Required fields are complete.")}</p>
+      <ul>
+        {items.map((item) => (
+          <li key={item.label} className={item.complete ? "complete" : item.optional ? "optional" : "missing"}>
+            <span>{item.complete ? "OK" : item.optional ? "-" : "!"}</span>
+            {item.label}
+            {item.optional ? <small>{labels.optional || "optional"}</small> : null}
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }
 
@@ -230,10 +285,10 @@ export function KerfAdvisor() {
   const [selectedProfileId, setSelectedProfileId] = useState(DEFAULT_OPTICAL_PROFILE.id);
   const [materialId, setMaterialId] = useState("");
   const [family, setFamily] = useState<KerfMaterialFamily>("cast_acrylic");
-  const [subtype, setSubtype] = useState("cast_acrylic");
+  const [subtype, setSubtype] = useState("");
   const [thicknessMm, setThicknessMm] = useState(6);
   const [operation, setOperation] = useState<KerfOperation | "">("");
-  const [qualityGoal, setQualityGoal] = useState<KerfQualityGoal>("clean_bottom_exit");
+  const [qualityGoal, setQualityGoal] = useState<KerfQualityGoal | "">("");
   const [airAssist, setAirAssist] = useState<"off" | "low" | "medium" | "high">("medium");
   const [extraction, setExtraction] = useState(true);
   const [calibrationMode, setCalibrationMode] = useState<KerfCalibrationMode>("focus_ladder");
@@ -264,16 +319,22 @@ export function KerfAdvisor() {
 
   const selectedMaterial = KERF_MATERIALS.find((material) => material.id === materialId) || KERF_MATERIALS[0];
   const selectedProfile = profiles.find((profile) => profile.id === selectedProfileId) || profiles[0] || DEFAULT_OPTICAL_PROFILE;
-  const resultReady = Boolean(selectedProfileId && materialId && operation && Number.isFinite(thicknessMm) && thicknessMm > 0);
+  const validThickness = Number.isFinite(thicknessMm) && thicknessMm > 0;
+  const resultReady = Boolean(selectedProfileId && materialId && subtype && operation && qualityGoal && validThickness);
   const effectiveOperation = (operation || "cut_through") as KerfOperation;
+  const effectiveQualityGoal = (qualityGoal || "clean_bottom_exit") as KerfQualityGoal;
+  const selectSubtypeLabel = labels.selectSubtype || `Select ${labels.subtype.toLowerCase()}`;
+  const selectQualityGoalLabel = labels.selectQualityGoal || `Select ${labels.qualityGoal.toLowerCase()}`;
+  const selectOperationFirstLabel = labels.selectOperationFirst || labels.selectOperation;
+  const advancedLabel = labels.advanced || "Advanced";
   const inputs: KerfAdvisorInputs = {
     opticalProfile: selectedProfile,
     materialId,
     family,
-    subtype,
+    subtype: subtype || undefined,
     thicknessMm,
     operation: effectiveOperation,
-    qualityGoal,
+    qualityGoal: effectiveQualityGoal,
     airAssist,
     extraction,
     topKerfMm: numberOrUndefined(topKerf),
@@ -291,19 +352,34 @@ export function KerfAdvisor() {
   const lightBurnNotes = useMemo(() => result ? buildLocalizedLightBurnNotes(result, inputs, labels) : "", [result, inputs, labels]);
   const thicknessStep = thicknessStepFor(thicknessMm);
   const help = (key: string, fallback: string) => labels[key] || fallback;
+  const requiredFields = [
+    { label: labels.opticalProfile, complete: Boolean(selectedProfileId) },
+    { label: labels.materialPreset, complete: Boolean(materialId) },
+    { label: labels.subtype, complete: Boolean(subtype) },
+    { label: `${labels.thickness} (mm)`, complete: validThickness },
+    { label: labels.operation, complete: Boolean(operation) },
+    { label: labels.qualityGoal, complete: Boolean(qualityGoal) },
+    { label: labels.airAssist, complete: true, optional: true },
+    { label: labels.extraction, complete: extraction, optional: true },
+  ];
 
   function chooseMaterial(nextId: string) {
     if (!nextId) {
       setMaterialId("");
       setFamily("cast_acrylic");
-      setSubtype("cast_acrylic");
+      setSubtype("");
       return;
     }
     const material = KERF_MATERIALS.find((item) => item.id === nextId) || KERF_MATERIALS[0];
     setMaterialId(nextId);
     setFamily(material.family);
-    setSubtype(material.subtypes[0] || material.family);
+    setSubtype("");
     setThicknessMm(material.thicknessesMm[0] || 3);
+  }
+
+  function chooseOperation(nextOperation: KerfOperation | "") {
+    setOperation(nextOperation);
+    if (!nextOperation) setQualityGoal("");
   }
 
   function saveProfile() {
@@ -318,7 +394,7 @@ export function KerfAdvisor() {
       thicknessMm,
       opticalProfileId: selectedProfile.id,
       operation,
-      qualityGoal,
+      qualityGoal: effectiveQualityGoal,
       recommendedFocusDepthMm: result.recommendedFocusDepthMm,
       acceptableFocusMinMm: result.acceptableFocusMinMm,
       acceptableFocusMaxMm: result.acceptableFocusMaxMm,
@@ -366,97 +442,101 @@ export function KerfAdvisor() {
           <aside className="stack">
               <section className="mini-panel">
                 <h2>{labels.opticalProfile}</h2>
-                <label>
+                <div className="field-control">
                   <InfoLabel label={labels.opticalProfile} body={help("helpOpticalProfile", labels.importProfile)} onOpen={setInfoModal} />
                   <select value={selectedProfileId} onChange={(event) => setSelectedProfileId(event.target.value)}>
                     {profiles.map((profile) => <option key={profile.id} value={profile.id}>{opticalProfileOptionLabel(profile, labels)}</option>)}
                   </select>
+                </div>
+                <details className="nested-details">
+                  <summary>{labels.profileDetails}</summary>
                   <span className="field-hint">{profiles.length ? labels.importProfile : labels.noProfile}</span>
-                </label>
-                <div className="kv"><span>{labels.lensFocalLength}</span><span>{formatLength(selectedProfile.lensFocalLengthMm, unitSystem, 2)}</span></div>
-                <div className="kv"><span>{labels.measuredSpot}</span><span>{formatLength(selectedProfile.measuredSpotDiameterMm, unitSystem, 4)}</span></div>
-                <div className="kv"><span>{labels.rayleigh}</span><span>{formatLength(selectedProfile.rayleighRangeMm, unitSystem, 4)}</span></div>
-                <p className="small">{labels.opticalProfileExplain}</p>
-                <p className="small">{labels.measuredKerfExplain}</p>
-                <RayleighRangeGraph profile={selectedProfile} labels={labels} />
+                  <div className="kv"><span>{labels.lensFocalLength}</span><span>{formatLength(selectedProfile.lensFocalLengthMm, unitSystem, 2)}</span></div>
+                  <div className="kv"><span>{labels.measuredSpot}</span><span>{formatLength(selectedProfile.measuredSpotDiameterMm, unitSystem, 4)}</span></div>
+                  <div className="kv"><span>{labels.rayleigh}</span><span>{formatLength(selectedProfile.rayleighRangeMm, unitSystem, 4)}</span></div>
+                  <p className="small">{labels.opticalProfileExplain}</p>
+                  <p className="small">{labels.measuredKerfExplain}</p>
+                  <RayleighRangeGraph profile={selectedProfile} labels={labels} />
+                </details>
               </section>
 
               <section className="mini-panel">
                 <h2>{labels.materialPreset}</h2>
-                <label>
-                  <InfoLabel label={labels.materialPreset} body={help("helpMaterialPreset", labels.opticalIndicatorNotice)} onOpen={setInfoModal} />
-                  <select value={materialId} onChange={(event) => chooseMaterial(event.target.value)}>
-                    <option value="">{labels.selectMaterial}</option>
-                    {KERF_MATERIALS.map((material) => <option key={material.id} value={material.id}>{labels[material.labelKey]}</option>)}
-                  </select>
-                </label>
-                <label>
-                  <InfoLabel label={labels.subtype} body={help("helpSubtype", labels.opticalIndicatorNotice)} onOpen={setInfoModal} />
-                  <select value={subtype} onChange={(event) => {
-                    const next = event.target.value as KerfMaterialFamily;
-                    setSubtype(next);
-                    if (["cast_acrylic", "xt_acrylic", "mirror_acrylic", "birch_plywood", "ilomba_plywood", "mdf", "paper_cardstock", "leather", "fabric", "nonwoven", "unknown_plastic"].includes(next)) setFamily(next);
-                  }}>
-                    {selectedMaterial.subtypes.map((item) => <option key={item} value={item}>{labels[item] || item}</option>)}
-                  </select>
-                </label>
-                <label>
-                  <InfoLabel label={`${labels.thickness} (mm)`} body={help("helpThickness", labels.opticalIndicatorNotice)} onOpen={setInfoModal} />
-                  <input type="number" min="0.01" step={thicknessStep} value={thicknessMm} onChange={(event) => setThicknessMm(Number(event.target.value))} onBlur={() => setThicknessMm((current) => roundThickness(current))} />
-                </label>
+                <div className="kerf-three-column-row">
+                  <div className="field-control">
+                    <InfoLabel label={labels.materialPreset} body={help("helpMaterialPreset", labels.opticalIndicatorNotice)} onOpen={setInfoModal} />
+                    <select value={materialId} onChange={(event) => chooseMaterial(event.target.value)}>
+                      <option value="">{labels.selectMaterial}</option>
+                      {KERF_MATERIALS.map((material) => <option key={material.id} value={material.id}>{labels[material.labelKey]}</option>)}
+                    </select>
+                  </div>
+                  <div className="field-control">
+                    <InfoLabel label={labels.subtype} body={help("helpSubtype", labels.opticalIndicatorNotice)} onOpen={setInfoModal} />
+                    <select value={subtype} disabled={!materialId} onChange={(event) => {
+                      const next = event.currentTarget.value as KerfMaterialFamily | "";
+                      setSubtype(next);
+                      if (next && ["cast_acrylic", "xt_acrylic", "mirror_acrylic", "birch_plywood", "ilomba_plywood", "mdf", "paper_cardstock", "leather", "fabric", "nonwoven", "unknown_plastic"].includes(next)) setFamily(next);
+                    }}>
+                      <option value="">{materialId ? selectSubtypeLabel : labels.selectMaterial}</option>
+                      {materialId ? selectedMaterial.subtypes.map((item) => <option key={item} value={item}>{labels[item] || item}</option>) : null}
+                    </select>
+                  </div>
+                  <div className="field-control">
+                    <InfoLabel label={`${labels.thickness} (mm)`} body={help("helpThickness", labels.opticalIndicatorNotice)} onOpen={setInfoModal} />
+                    <input type="number" min="0.01" step={thicknessStep} value={thicknessMm} onChange={(event) => setThicknessMm(Number(event.target.value))} onBlur={() => setThicknessMm((current) => roundThickness(current))} />
+                  </div>
+                </div>
               </section>
 
               <section className="mini-panel">
                 <h2>{labels.operation}</h2>
-                <label>
-                  <InfoLabel label={labels.operation} body={help("helpOperation", labels.opticalIndicatorNotice)} onOpen={setInfoModal} />
-                  <select value={operation} onChange={(event) => setOperation(event.target.value as KerfOperation | "")}>
-                    <option value="">{labels.selectOperation}</option>
-                    {KERF_OPERATIONS.map((item) => <option key={item} value={item}>{labels[item]}</option>)}
-                  </select>
-                </label>
-                <label>
-                  <InfoLabel label={labels.qualityGoal} body={help("helpQualityGoal", labels.opticalIndicatorNotice)} onOpen={setInfoModal} />
-                  <select value={qualityGoal} onChange={(event) => setQualityGoal(event.target.value as KerfQualityGoal)}>
-                    {KERF_QUALITY_GOALS.map((item) => <option key={item} value={item}>{labels[item]}</option>)}
-                  </select>
-                </label>
-                <div className="field-row compact-row">
-                  <label>
+                <div className="kerf-three-column-row">
+                  <div className="field-control">
+                    <InfoLabel label={labels.operation} body={help("helpOperation", labels.opticalIndicatorNotice)} onOpen={setInfoModal} />
+                    <select value={operation} onChange={(event) => chooseOperation(event.target.value as KerfOperation | "")}>
+                      <option value="">{labels.selectOperation}</option>
+                      {KERF_OPERATIONS.map((item) => <option key={item} value={item}>{labels[item]}</option>)}
+                    </select>
+                  </div>
+                  <div className="field-control">
+                    <InfoLabel label={labels.qualityGoal} body={help("helpQualityGoal", labels.opticalIndicatorNotice)} onOpen={setInfoModal} />
+                    <select value={qualityGoal} disabled={!operation} onChange={(event) => setQualityGoal(event.target.value as KerfQualityGoal | "")}>
+                      <option value="">{operation ? selectQualityGoalLabel : selectOperationFirstLabel}</option>
+                      {operation ? KERF_QUALITY_GOALS.map((item) => <option key={item} value={item}>{labels[item]}</option>) : null}
+                    </select>
+                  </div>
+                  <div className="field-control">
                     <InfoLabel label={labels.airAssist} body={help("helpAirAssist", labels.opticalIndicatorNotice)} onOpen={setInfoModal} />
                     <select value={airAssist} onChange={(event) => setAirAssist(event.target.value as "off" | "low" | "medium" | "high")}>
                       {["off", "low", "medium", "high"].map((item) => <option key={item} value={item}>{labels[item]}</option>)}
                     </select>
-                  </label>
-                  <label>
-                    <InfoLabel label={labels.extraction} body={help("helpExtraction", labels.opticalIndicatorNotice)} onOpen={setInfoModal} />
-                    <select value={extraction ? "on" : "off"} onChange={(event) => setExtraction(event.target.value === "on")}>
-                      <option value="on">{labels.extractionOn}</option>
-                      <option value="off">{labels.extractionOff}</option>
-                    </select>
-                  </label>
+                  </div>
                 </div>
-                {operation ? <ThermalSelectionPanel operation={operation} qualityGoal={qualityGoal} labels={labels} /> : null}
+                <div className="check-label extraction-check-row">
+                  <input type="checkbox" checked={extraction} onChange={(event) => setExtraction(event.target.checked)} />
+                  <InfoLabel label={labels.extraction} body={help("helpExtraction", labels.opticalIndicatorNotice)} onOpen={setInfoModal} />
+                </div>
+                <ThermalSelectionPanel operation={operation} qualityGoal={qualityGoal} labels={labels} />
               </section>
 
-              <section className="mini-panel">
-                <h2>{labels.calibrationMode}</h2>
-                <label>
+              <details className="mini-panel advanced-kerf-section">
+                <summary>{advancedLabel}</summary>
+                <div className="field-control">
                   <InfoLabel label={labels.calibrationMode} body={help("helpCalibrationMode", labels.calibrationTest)} onOpen={setInfoModal} />
                   <select value={calibrationMode} onChange={(event) => setCalibrationMode(event.target.value as KerfCalibrationMode)}>
                     {KERF_CALIBRATION_MODES.map((item) => <option key={item} value={item}>{labels[item]}</option>)}
                   </select>
                   <span className="field-hint">{labels[`calibrationModeMeaning_${calibrationMode}`] || labels.helpCalibrationMode}</span>
-                </label>
-                <div className="field-row compact-row">
-                  <label><InfoLabel label={`${labels.topKerf} (mm)`} body={help("helpTopKerf", labels.measuredKerf)} onOpen={setInfoModal} /><input type="number" step="0.001" value={topKerf} onChange={(event) => setTopKerf(event.target.value)} /></label>
-                  <label><InfoLabel label={`${labels.bottomKerf} (mm)`} body={help("helpBottomKerf", labels.measuredKerf)} onOpen={setInfoModal} /><input type="number" step="0.001" value={bottomKerf} onChange={(event) => setBottomKerf(event.target.value)} /></label>
                 </div>
-                <label><InfoLabel label={`${labels.averageKerf} (mm)`} body={help("helpAverageKerf", labels.measuredKerf)} onOpen={setInfoModal} /><input type="number" step="0.001" value={averageKerf} onChange={(event) => setAverageKerf(event.target.value)} /></label>
                 <div className="field-row compact-row">
-                  <label><InfoLabel label={`${labels.designedWidth} (mm)`} body={help("helpDesignedWidth", labels.calibrationTest)} onOpen={setInfoModal} /><input type="number" step="0.01" value={designedWidth} onChange={(event) => setDesignedWidth(event.target.value)} /></label>
-                  <label><InfoLabel label={`${labels.measuredWidth} (mm)`} body={help("helpMeasuredWidth", labels.calibrationTest)} onOpen={setInfoModal} /><input type="number" step="0.01" value={measuredWidth} onChange={(event) => setMeasuredWidth(event.target.value)} /></label>
-                  <label><InfoLabel label={labels.cutLines} body={help("helpCutLines", labels.calibrationTest)} onOpen={setInfoModal} /><input type="number" step="1" value={cutLines} onChange={(event) => setCutLines(event.target.value)} /></label>
+                  <div className="field-control"><InfoLabel label={`${labels.topKerf} (mm)`} body={help("helpTopKerf", labels.measuredKerf)} onOpen={setInfoModal} /><input type="number" step="0.001" value={topKerf} onChange={(event) => setTopKerf(event.target.value)} /></div>
+                  <div className="field-control"><InfoLabel label={`${labels.bottomKerf} (mm)`} body={help("helpBottomKerf", labels.measuredKerf)} onOpen={setInfoModal} /><input type="number" step="0.001" value={bottomKerf} onChange={(event) => setBottomKerf(event.target.value)} /></div>
+                </div>
+                <div className="field-control"><InfoLabel label={`${labels.averageKerf} (mm)`} body={help("helpAverageKerf", labels.measuredKerf)} onOpen={setInfoModal} /><input type="number" step="0.001" value={averageKerf} onChange={(event) => setAverageKerf(event.target.value)} /></div>
+                <div className="field-row compact-row">
+                  <div className="field-control"><InfoLabel label={`${labels.designedWidth} (mm)`} body={help("helpDesignedWidth", labels.calibrationTest)} onOpen={setInfoModal} /><input type="number" step="0.01" value={designedWidth} onChange={(event) => setDesignedWidth(event.target.value)} /></div>
+                  <div className="field-control"><InfoLabel label={`${labels.measuredWidth} (mm)`} body={help("helpMeasuredWidth", labels.calibrationTest)} onOpen={setInfoModal} /><input type="number" step="0.01" value={measuredWidth} onChange={(event) => setMeasuredWidth(event.target.value)} /></div>
+                  <div className="field-control"><InfoLabel label={labels.cutLines} body={help("helpCutLines", labels.calibrationTest)} onOpen={setInfoModal} /><input type="number" step="1" value={cutLines} onChange={(event) => setCutLines(event.target.value)} /></div>
                 </div>
                 <CalibrationModeGraph mode={calibrationMode} labels={labels} />
                 <article className="info-box better-results-panel">
@@ -464,7 +544,7 @@ export function KerfAdvisor() {
                   <p className="small"><strong>{labels.betterKerfCalibration}</strong> {labels.betterKerfCalibrationBody}</p>
                   <p className="small"><strong>{labels.betterAlignmentTest}</strong> {labels.alignmentNineSpotTest}</p>
                 </article>
-              </section>
+              </details>
 
               <section className="mini-panel">
                 <h2>{labels.savedProfiles}</h2>
@@ -473,27 +553,22 @@ export function KerfAdvisor() {
                   <button className="button secondary" type="button" onClick={() => setJsonData(JSON.stringify(customProfiles, null, 2))}>{labels.exportJson}</button>
                   <button className="button secondary" type="button" onClick={importJson}>{labels.importJson}</button>
                 </div>
-                <label>
+                <div className="field-control">
                   <InfoLabel label={labels.jsonData} body={help("helpJsonData", labels.localStorageNote)} onOpen={setInfoModal} />
                   <textarea value={jsonData} onChange={(event) => setJsonData(event.target.value)} />
-                </label>
+                </div>
                 <p className="small">{labels.localStorageNote}</p>
               </section>
           </aside>
 
           {result ? (
-          <section className="stack">
+          <section className="stack kerf-results-rail">
             {result.blocked ? <div className="error">{labels.unknownPlasticBlocked}</div> : null}
             <div className="readouts">
-              <MetricCard label={labels.focusDepth} value={`${formatNumber(result.recommendedFocusDepthMm, 3)} mm`} sub={`${formatNumber(result.recommendedFocusPercent, 1)}% · ${labels[result.placementLabelKey]}`} tone={result.blocked ? "danger" : "ok"} />
+              <MetricCard label={labels.focusDepth} value={`${formatNumber(result.recommendedFocusDepthMm, 3)} mm`} sub={`${formatNumber(result.recommendedFocusPercent, 1)}% · ${labels[result.placementLabelKey]}`} detail={labels.focusDepthExplain} onInfoOpen={setInfoModal} tone={result.blocked ? "danger" : "ok"} />
               <MetricCard label={labels.focusRange} value={`${formatNumber(result.acceptableFocusMinMm, 2)} - ${formatNumber(result.acceptableFocusMaxMm, 2)} mm`} sub={`${formatNumber(result.acceptableFocusMinPercent, 1)}% - ${formatNumber(result.acceptableFocusMaxPercent, 1)}%`} />
-              <MetricCard label={labels.opticalTaper} value={labels[result.opticalTaperTendency]} sub={`${labels.symmetryError}: ${formatNumber(result.opticalSymmetryError * 100, 1)}%`} tone={result.opticalTaperTendency === "high" ? "warn filled" : "ok"} />
-              <MetricCard label={labels.confidence} value={`${labels[result.confidence]} ${formatNumber(result.confidenceScore, 0)}/100`} sub={confidenceExplanation} />
-            </div>
-            <div className="panels kerf-explain-grid">
-              <article className="mini-panel"><h2>{labels.focusDepth}</h2><p className="small">{labels.focusDepthExplain}</p></article>
-              <article className="mini-panel"><h2>{labels.opticalTaper}</h2><p className="small">{labels.opticalTaperExplain}</p></article>
-              <article className="mini-panel"><h2>{labels.confidenceExplainTitle}</h2><p className="small">{labels.confidenceExplainBody}</p></article>
+              <MetricCard label={labels.opticalTaper} value={labels[result.opticalTaperTendency]} sub={`${labels.symmetryError}: ${formatNumber(result.opticalSymmetryError * 100, 1)}%`} detail={labels.opticalTaperExplain} onInfoOpen={setInfoModal} tone={result.opticalTaperTendency === "high" ? "warn filled" : "ok"} />
+              <MetricCard label={labels.confidence} value={`${labels[result.confidence]} ${formatNumber(result.confidenceScore, 0)}/100`} sub={confidenceExplanation} detail={labels.confidenceExplainBody} onInfoOpen={setInfoModal} />
             </div>
             <BeamMaterialGraph result={result} thicknessMm={thicknessMm} labels={labels} />
             <div className="panels kerf-panels">
@@ -520,7 +595,9 @@ export function KerfAdvisor() {
             </div>
           </section>
           ) : (
-            <section className="stack kerf-results-empty" aria-live="polite" />
+            <section className="stack kerf-results-empty kerf-results-rail" aria-live="polite">
+              <RequiredFieldsPanel items={requiredFields} labels={labels} />
+            </section>
           )}
         </div>
       </section>

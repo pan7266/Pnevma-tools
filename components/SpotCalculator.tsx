@@ -188,7 +188,9 @@ export function SpotCalculator() {
       const validation = validateSpotInputs(values);
       if (!validation.ok || !validation.value) {
         setInvalidFields(invalidFieldsFromErrors(validation.errors));
-        setError(labels.invalidInputs);
+        setError(null);
+        setResult(null);
+        setHasRun(false);
         return;
       }
       const next = await calculateSpotFromApi(validation.value);
@@ -264,21 +266,23 @@ export function SpotCalculator() {
       return;
     }
     const source = result?.source || getSource(activeSourceId);
+    const sourceSpecifiedHz = source.excitation === "RF";
+    const hzValue = (value: number) => sourceSpecifiedHz ? `${formatCompact(value, 0)} Hz` : labels.notAvailable || "N/A";
     const rows = [
       [labels.brand, source.brand],
       [labels.model, source.model],
       [labels.excitation, source.excitation],
       [labels.rated, `${source.ratedWatt} W`],
-      [labels.peak, source.peakWatt ? `${source.peakWatt} W` : labels.notAvailable || "N/A"],
+      [labels.peak, source.maxPowerW || source.peakWatt ? `${source.maxPowerW || source.peakWatt} W` : labels.notAvailable || "N/A"],
       [labels.sourceBeam, `${formatLength(source.beamMm, unitSystem, 2)} (${source.tolerance})`],
       ["M2", String(source.m2)],
-      [labels.defaultHz, `${formatCompact(source.hzDefault, 0)} Hz`],
-      [labels.maxHz, `${formatCompact(source.hzMax, 0)} Hz`],
+      [labels.defaultHz, hzValue(source.hzDefault)],
+      [labels.maxHz, hzValue(source.hzMax)],
       [labels.wavelength, `${source.wavelengthUm} um`],
       [labels.confidence, source.confidence],
       [labels.tubeLength, source.tubeLengthMm ? formatLength(source.tubeLengthMm, unitSystem, 1) : labels.notAvailable || "N/A"],
       [labels.tubeDiameter, source.tubeDiameterMm ? formatLength(source.tubeDiameterMm, unitSystem, 1) : labels.notAvailable || "N/A"],
-      [labels.bestCurrent, source.currentBestMa ? `${source.currentBestMa} mA` : labels.notAvailable || "N/A"],
+      [labels.bestCurrent, source.currentBestLabel || (source.currentBestMa ? `${source.currentBestMa} mA${source.currentEstimated ? ` (${labels.estimated || "estimated"})` : ""}` : labels.notAvailable || "N/A")],
       [labels.dataSource, source.sourceLabel],
     ];
     setModal({
@@ -337,6 +341,7 @@ export function SpotCalculator() {
     return (
       <div className="readouts">
         <MetricCard label={labels.spotDiameter} value={formatLength(result.spot, unitSystem, 4)} />
+        <MetricCard label={labels.beamStability} value={labels[result.beamStability]} tone={result.beamStability === "stable" ? "ok" : result.beamStability === "unstable" ? "danger" : "warn"} />
         <MetricCard label={labels.sourceBeam} value={formatLength(result.sourceBeam, unitSystem, 2)} />
         <MetricCard label={labels.effectiveBeam} value={formatLength(result.effectiveBeam, unitSystem, 2)} sub={`${formatLength(result.clearAperture, unitSystem, 2)} ${labels.lensLower} / ${formatLength(result.mirrorClearAperture, unitSystem, 2)} ${labels.mirrorLower}`} />
         <MetricCard label={labels.expandedBeam} value={formatLength(result.expandedBeam, unitSystem, 2)} />
@@ -347,7 +352,6 @@ export function SpotCalculator() {
         <MetricCard label={labels.combinerEffect} value={`${formatCompact(result.beamCombinerLossWatt, 2)} W`} sub={`${formatCompact(result.beamCombinerTransmission * 100, 2)}%`} />
         <MetricCard label={labels.powerDensity} value={`${formatCompact(unitSystem === "imperial" ? result.powerDensityWPerMm2 * 645.16 : result.powerDensityWPerMm2, 2)} ${powerDensityUnit}`} />
         <MetricCard label={labels.spotTemperature} value={`${formatCompact(result.spotTemperatureC, 0)} °C`} sub={labels.estimatedSpotTemperature} tone="warn" />
-        <MetricCard label={labels.beamStability} value={labels[result.beamStability]} tone={result.beamStability === "stable" ? "ok" : result.beamStability === "unstable" ? "danger" : "warn"} />
         <MetricCard label={labels.pulseEnergy} value={`${formatNumber(result.pulseEnergyMj, 3)} mJ`} />
       </div>
     );

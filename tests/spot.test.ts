@@ -4,7 +4,7 @@ import { spotDefaultValues } from "../lib/data/defaults";
 import type { SpotInputs } from "../types";
 
 describe("calculateSpot", () => {
-  it("preserves the old default CO2 spot calculation", () => {
+  it("matches the sourced RECI W4 default CO2 spot calculation", () => {
     const result = calculateSpot({ ...(spotDefaultValues as unknown as SpotInputs), sourceId: "reci-w4" });
 
     expect(result.spot).toBeCloseTo(0.10757787395593282, 12);
