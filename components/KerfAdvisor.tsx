@@ -39,14 +39,12 @@ function numberOrUndefined(value: string): number | undefined {
 }
 
 function thicknessStepFor(value: number): number {
-  return 0.01;
+  return 1;
 }
 
 function roundThickness(value: number): number {
   if (!Number.isFinite(value)) return 1;
-  const safe = Math.max(value, 0.01);
-  const step = thicknessStepFor(safe);
-  return Number((Math.round(safe / step) * step).toFixed(2));
+  return Number(Math.max(value, 0.1).toFixed(1));
 }
 
 function compactProfileSource(profileName: string): string {
@@ -308,6 +306,7 @@ export function KerfAdvisor() {
   const [family, setFamily] = useState<KerfMaterialFamily>("cast_acrylic");
   const [subtype, setSubtype] = useState("");
   const [thicknessMm, setThicknessMm] = useState(6);
+  const [thicknessInput, setThicknessInput] = useState("6.0");
   const [operation, setOperation] = useState<KerfOperation | "">("");
   const [qualityGoal, setQualityGoal] = useState<KerfQualityGoal | "">("");
   const [airAssist, setAirAssist] = useState<"off" | "low" | "medium" | "high">("medium");
@@ -419,12 +418,32 @@ export function KerfAdvisor() {
     setMaterialId(nextId);
     setFamily(material.family);
     setSubtype("");
-    setThicknessMm(material.thicknessesMm[0] || 3);
+    const nextThickness = roundThickness(material.thicknessesMm[0] || 3);
+    setThicknessMm(nextThickness);
+    setThicknessInput(nextThickness.toFixed(1));
   }
 
   function chooseOperation(nextOperation: KerfOperation | "") {
     setOperation(nextOperation);
     if (!nextOperation) setQualityGoal("");
+  }
+
+  function updateThicknessInput(value: string) {
+    const normalized = value.replace(",", ".");
+    if (!/^\d*(?:\.\d{0,1})?$/.test(normalized)) return;
+    setThicknessInput(value);
+    if (!normalized || normalized === ".") {
+      setThicknessMm(Number.NaN);
+      return;
+    }
+    const parsed = Number(normalized);
+    if (Number.isFinite(parsed)) setThicknessMm(parsed);
+  }
+
+  function commitThicknessInput() {
+    const rounded = roundThickness(Number(thicknessInput.replace(",", ".")));
+    setThicknessMm(rounded);
+    setThicknessInput(rounded.toFixed(1));
   }
 
   function saveProfile() {
@@ -528,7 +547,14 @@ export function KerfAdvisor() {
                   </div>
                   <div className={fieldClass("thickness")} data-required-field="thickness">
                     <InfoLabel label={`${labels.thickness} (mm)`} body={help("helpThickness", labels.opticalIndicatorNotice)} onOpen={setInfoModal} />
-                    <NumberInput min="0.01" step={thicknessStep} value={Number.isFinite(thicknessMm) ? thicknessMm : ""} onValueChange={(value) => setThicknessMm(value === "" ? Number.NaN : Number(value))} onBlur={() => setThicknessMm((current) => roundThickness(current))} />
+                    <NumberInput
+                      min="0.1"
+                      step={thicknessStep}
+                      formatPrecision={1}
+                      value={thicknessInput}
+                      onValueChange={updateThicknessInput}
+                      onBlur={commitThicknessInput}
+                    />
                   </div>
                 </div>
               </section>
