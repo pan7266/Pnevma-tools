@@ -179,7 +179,8 @@ function AxisCard({
   const showBelt = axis.driveType === "belt";
   const showLead = axis.driveType === "leadScrew";
   const showDirect = axis.driveType === "direct";
-  const showDual = axis.dualMotorMode !== "none" && !isControllerOnly;
+  const dualMotorMode = axis.dualMotorMode === "specialRatio" ? "normalGantry" : axis.dualMotorMode;
+  const showDual = dualMotorMode !== "none" && !isControllerOnly;
   const whyKey = axisKey === "x" ? "xWhy" : "yWhy";
   const calc = calculateAxisMechanics(axis);
   const desc = (key: string) => labels[`${key}Description`] || labels.fieldInfo;
@@ -239,8 +240,10 @@ function AxisCard({
                 {labels.motorDetails}
               </button>
             </div>
-            <Field label={labels.motorAngle} step="0.0001" placeholder="0.9" value={axis.motorAngle} description={desc("motorAngle")} onInfo={onInfo} onChange={(value) => onChange(axisKey, "motorAngle", value)} />
-            <Field label={labels.microstepping} step="1" placeholder="16" value={axis.microstepping} description={desc("microstepping")} onInfo={onInfo} onChange={(value) => onChange(axisKey, "microstepping", value)} />
+            <div className="field-row compact-row motor-step-row">
+              <Field label={labels.motorAngle} step="0.0001" placeholder="0.9" value={axis.motorAngle} description={desc("motorAngle")} onInfo={onInfo} onChange={(value) => onChange(axisKey, "motorAngle", value)} />
+              <Field label={labels.microstepping} step="1" placeholder="16" value={axis.microstepping} description={desc("microstepping")} onInfo={onInfo} onChange={(value) => onChange(axisKey, "microstepping", value)} />
+            </div>
           </>
         ) : null}
         <Field
@@ -295,14 +298,13 @@ function AxisCard({
         ) : null}
         <SelectField
           label={labels.dualMotorMode}
-          value={axis.dualMotorMode}
+          value={dualMotorMode}
           description={desc("dualMotorMode")}
           onInfo={onInfo}
           onChange={(value) => onChange(axisKey, "dualMotorMode", value)}
           options={[
             ["none", labels.noDual],
             ["normalGantry", labels.normalGantry],
-            ["specialRatio", labels.specialRatio],
           ]}
         />
         {showDual ? (
@@ -318,9 +320,11 @@ function AxisCard({
                 ...MOTOR_PRESETS.map((preset) => [preset.id, `${preset.name} (${preset.frameSize}, ${preset.stepAngleDeg} deg)`] as [string, string]),
               ]}
             />
-            <Field label={labels.secondMotorAngle} placeholder="0.9" value={axis.secondMotorAngle} description={desc("secondMotorAngle")} onInfo={onInfo} onChange={(value) => onChange(axisKey, "secondMotorAngle", value)} />
+            <div className="field-row compact-row motor-step-row">
+              <Field label={labels.secondMotorAngle} placeholder="0.9" value={axis.secondMotorAngle} description={desc("secondMotorAngle")} onInfo={onInfo} onChange={(value) => onChange(axisKey, "secondMotorAngle", value)} />
+              <Field label={labels.secondMicrostepping} step="1" placeholder="16" value={axis.secondMicrostepping} description={desc("secondMicrostepping")} onInfo={onInfo} onChange={(value) => onChange(axisKey, "secondMicrostepping", value)} />
+            </div>
             <Field label={labels.secondPulleyTeeth} step="1" placeholder="20" value={axis.secondPulleyTeeth} description={desc("secondPulleyTeeth")} onInfo={onInfo} onChange={(value) => onChange(axisKey, "secondPulleyTeeth", value)} />
-            <Field label={labels.secondMicrostepping} step="1" placeholder="16" value={axis.secondMicrostepping} description={desc("secondMicrostepping")} onInfo={onInfo} onChange={(value) => onChange(axisKey, "secondMicrostepping", value)} />
           </>
         ) : null}
         <p className="small">{calc.valid ? `${distancePerMicrostepLabel(labels.mmPerMicrostep, unit)}: ${formatLength(calc.mmPerMicrostep, unitSystem, 6)}` : calc.reason}</p>
@@ -371,6 +375,15 @@ export function AxisCalculator() {
   useEffect(() => {
     setValues((current) => ({ ...current, language: lang, theme, unitSystem }));
   }, [lang, theme, unitSystem]);
+
+  useEffect(() => {
+    if (!infoModal) return;
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") setInfoModal(null);
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [infoModal]);
 
   const runCalculation = useCallback(async () => {
     try {
@@ -470,8 +483,10 @@ export function AxisCalculator() {
           </div>
           <span className="field-hint">{labels.scanModeDescription}</span>
         </div>
-        <Field label={labelWithUnit(labels.lineInterval, unit)} value={displayLengthValue(values.lineInterval, unitSystem, 4)} placeholder={unitSystem === "imperial" ? "0.0024 in" : "0.0600 mm"} description={labels.lineIntervalDescription} onInfo={setInfoModal} onChange={updateLineInterval} />
-        <Field label={labels.dpi} value={displayDpiValue(values.dpi)} step="0.1" placeholder="423.3 DPI" description={labels.dpiDescription} onInfo={setInfoModal} onChange={updateDpi} />
+        <div className="field-row compact-row axis-interval-pair">
+          <Field label={labelWithUnit(labels.lineInterval, unit)} value={displayLengthValue(values.lineInterval, unitSystem, 4)} placeholder={unitSystem === "imperial" ? "0.0024 in" : "0.0600 mm"} description={labels.lineIntervalDescription} onInfo={setInfoModal} onChange={updateLineInterval} />
+          <Field label={labels.dpi} value={displayDpiValue(values.dpi)} step="0.1" placeholder="423.3 DPI" description={labels.dpiDescription} onInfo={setInfoModal} onChange={updateDpi} />
+        </div>
         <Field label={labelWithUnit(labels.spotDiameter, unit)} value={displayLengthValue(values.spotDiameter, unitSystem, 6)} placeholder={unitSystem === "imperial" ? "0.0047 in" : "0.12 mm"} description={labels.spotDiameterDescription} onInfo={setInfoModal} onChange={updateSpotDiameter} />
       </section>
 
@@ -484,7 +499,7 @@ export function AxisCalculator() {
         <section className="panel">
           <div className="panel-pad">
             {error ? <div className="error">{error}</div> : null}
-            <div className="readouts">
+            <div className="readouts axis-status-readouts">
               <MetricCard
                 label={labels.status}
                 value={interval ? (interval.clean ? labels.clean : labels.notClean) : labels.notAvailable}

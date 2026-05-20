@@ -1,10 +1,12 @@
 "use client";
 
+import { useState } from "react";
+import type { MouseEvent, ReactNode } from "react";
 import { AppSettingsProvider, useAppSettings } from "@/components/AppSettings";
 import { Sidebar } from "@/components/Sidebar";
 import { getLocale } from "@/locales";
 
-export function Workspace({ children }: { children: React.ReactNode }) {
+export function Workspace({ children }: { children: ReactNode }) {
   return (
     <AppSettingsProvider>
       <WorkspaceShell>{children}</WorkspaceShell>
@@ -12,21 +14,30 @@ export function Workspace({ children }: { children: React.ReactNode }) {
   );
 }
 
-function WorkspaceShell({ children }: { children: React.ReactNode }) {
+function WorkspaceShell({ children }: { children: ReactNode }) {
   const { lang } = useAppSettings();
   const labels = getLocale(lang).common;
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  function closeSidebarFromClick(event: MouseEvent<HTMLDivElement>) {
+    if (!sidebarOpen) return;
+    const target = event.target as HTMLElement;
+    if (target.closest(".sidebar-controls")) return;
+    setSidebarOpen(false);
+  }
+
   return (
     <>
       <header className="mobile-bar">
-        <label className="mobile-menu-toggle" htmlFor="sidebarToggle" aria-label={labels.openNavigation}>
+        <button className="mobile-menu-toggle" type="button" aria-label={labels.openNavigation} aria-expanded={sidebarOpen} onClick={() => setSidebarOpen((open) => !open)}>
           <span />
           <span />
           <span />
-        </label>
+        </button>
         <strong>{labels.appName}</strong>
       </header>
-      <input className="sidebar-toggle-input" id="sidebarToggle" type="checkbox" aria-hidden="true" />
-      <div className="workspace">
+      <input className="sidebar-toggle-input" id="sidebarToggle" type="checkbox" aria-hidden="true" checked={sidebarOpen} onChange={(event) => setSidebarOpen(event.target.checked)} />
+      <div className="workspace" onClick={closeSidebarFromClick}>
         <Sidebar />
         <section className="tool-shell">
           {children}

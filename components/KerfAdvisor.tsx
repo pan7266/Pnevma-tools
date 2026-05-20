@@ -225,15 +225,14 @@ function ThermalSelectionPanel({ operation, qualityGoal, labels }: { operation: 
 export function KerfAdvisor() {
   const { lang, unitSystem } = useAppSettings();
   const labels = useMemo(() => getLocale(lang).kerf, [lang]);
-  const [step, setStep] = useState(0);
   const [profiles, setProfiles] = useState<OpticalProfile[]>([DEFAULT_OPTICAL_PROFILE]);
   const [customProfiles, setCustomProfiles] = useState<UserMaterialProfile[]>([]);
   const [selectedProfileId, setSelectedProfileId] = useState(DEFAULT_OPTICAL_PROFILE.id);
-  const [materialId, setMaterialId] = useState(KERF_MATERIALS[0].id);
+  const [materialId, setMaterialId] = useState("");
   const [family, setFamily] = useState<KerfMaterialFamily>("cast_acrylic");
   const [subtype, setSubtype] = useState("cast_acrylic");
   const [thicknessMm, setThicknessMm] = useState(6);
-  const [operation, setOperation] = useState<KerfOperation>("cut_through");
+  const [operation, setOperation] = useState<KerfOperation | "">("");
   const [qualityGoal, setQualityGoal] = useState<KerfQualityGoal>("clean_bottom_exit");
   const [airAssist, setAirAssist] = useState<"off" | "low" | "medium" | "high">("medium");
   const [extraction, setExtraction] = useState(true);
@@ -254,15 +253,26 @@ export function KerfAdvisor() {
     setCustomProfiles(loadJsonArray<UserMaterialProfile>(KERF_STORAGE_KEYS.materialProfiles));
   }, []);
 
+  useEffect(() => {
+    if (!infoModal) return;
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") setInfoModal(null);
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [infoModal]);
+
   const selectedMaterial = KERF_MATERIALS.find((material) => material.id === materialId) || KERF_MATERIALS[0];
   const selectedProfile = profiles.find((profile) => profile.id === selectedProfileId) || profiles[0] || DEFAULT_OPTICAL_PROFILE;
+  const resultReady = Boolean(selectedProfileId && materialId && operation && Number.isFinite(thicknessMm) && thicknessMm > 0);
+  const effectiveOperation = (operation || "cut_through") as KerfOperation;
   const inputs: KerfAdvisorInputs = {
     opticalProfile: selectedProfile,
     materialId,
     family,
     subtype,
     thicknessMm,
-    operation,
+    operation: effectiveOperation,
     qualityGoal,
     airAssist,
     extraction,
@@ -276,21 +286,19 @@ export function KerfAdvisor() {
       numberOfCutLines: numberOrUndefined(cutLines),
     },
   };
-  const result = useMemo(() => calculateKerfAdvisor(inputs), [inputs]);
-  const confidenceExplanation = useMemo(() => localizedConfidenceExplanation(result, labels), [result, labels]);
-  const lightBurnNotes = useMemo(() => buildLocalizedLightBurnNotes(result, inputs, labels), [result, inputs, labels]);
-  const steps = [
-    { key: "optical", label: labels.stepOptical },
-    { key: "material", label: labels.stepMaterial },
-    { key: "operation", label: labels.stepOperation },
-    { key: "calibration", label: labels.stepCalibration },
-    { key: "export", label: labels.stepExport },
-  ] as const;
-  const activeStep = steps[step]?.key || "optical";
+  const result = useMemo(() => resultReady ? calculateKerfAdvisor(inputs) : null, [inputs, resultReady]);
+  const confidenceExplanation = useMemo(() => result ? localizedConfidenceExplanation(result, labels) : "", [result, labels]);
+  const lightBurnNotes = useMemo(() => result ? buildLocalizedLightBurnNotes(result, inputs, labels) : "", [result, inputs, labels]);
   const thicknessStep = thicknessStepFor(thicknessMm);
   const help = (key: string, fallback: string) => labels[key] || fallback;
 
   function chooseMaterial(nextId: string) {
+    if (!nextId) {
+      setMaterialId("");
+      setFamily("cast_acrylic");
+      setSubtype("cast_acrylic");
+      return;
+    }
     const material = KERF_MATERIALS.find((item) => item.id === nextId) || KERF_MATERIALS[0];
     setMaterialId(nextId);
     setFamily(material.family);
@@ -299,6 +307,7 @@ export function KerfAdvisor() {
   }
 
   function saveProfile() {
+    if (!result || !operation || !materialId) return;
     const now = new Date().toISOString();
     const profile: UserMaterialProfile = {
       id: `kerf-${Date.now()}`,
@@ -352,18 +361,9 @@ export function KerfAdvisor() {
         </div>
       </header>
 
-      <section className="panel panel-pad kerf-wizard">
-        <nav className="wizard-steps" aria-label={labels.title}>
-          {steps.map((item, index) => (
-            <button key={item.key} className={`wizard-step ${step === index ? "active" : ""}`} type="button" onClick={() => setStep(index)}>
-              <span>{index + 1}</span>{item.label}
-            </button>
-          ))}
-        </nav>
-
+      <section className="panel panel-pad kerf-workbench">
         <div className="kerf-grid">
           <aside className="stack">
-            {activeStep === "optical" ? (
               <section className="mini-panel">
                 <h2>{labels.opticalProfile}</h2>
                 <label>
@@ -378,15 +378,15 @@ export function KerfAdvisor() {
                 <div className="kv"><span>{labels.rayleigh}</span><span>{formatLength(selectedProfile.rayleighRangeMm, unitSystem, 4)}</span></div>
                 <p className="small">{labels.opticalProfileExplain}</p>
                 <p className="small">{labels.measuredKerfExplain}</p>
+                <RayleighRangeGraph profile={selectedProfile} labels={labels} />
               </section>
-            ) : null}
 
-            {activeStep === "material" ? (
               <section className="mini-panel">
                 <h2>{labels.materialPreset}</h2>
                 <label>
                   <InfoLabel label={labels.materialPreset} body={help("helpMaterialPreset", labels.opticalIndicatorNotice)} onOpen={setInfoModal} />
                   <select value={materialId} onChange={(event) => chooseMaterial(event.target.value)}>
+                    <option value="">{labels.selectMaterial}</option>
                     {KERF_MATERIALS.map((material) => <option key={material.id} value={material.id}>{labels[material.labelKey]}</option>)}
                   </select>
                 </label>
@@ -405,14 +405,13 @@ export function KerfAdvisor() {
                   <input type="number" min="0.01" step={thicknessStep} value={thicknessMm} onChange={(event) => setThicknessMm(Number(event.target.value))} onBlur={() => setThicknessMm((current) => roundThickness(current))} />
                 </label>
               </section>
-            ) : null}
 
-            {activeStep === "operation" ? (
               <section className="mini-panel">
                 <h2>{labels.operation}</h2>
                 <label>
                   <InfoLabel label={labels.operation} body={help("helpOperation", labels.opticalIndicatorNotice)} onOpen={setInfoModal} />
-                  <select value={operation} onChange={(event) => setOperation(event.target.value as KerfOperation)}>
+                  <select value={operation} onChange={(event) => setOperation(event.target.value as KerfOperation | "")}>
+                    <option value="">{labels.selectOperation}</option>
                     {KERF_OPERATIONS.map((item) => <option key={item} value={item}>{labels[item]}</option>)}
                   </select>
                 </label>
@@ -437,11 +436,9 @@ export function KerfAdvisor() {
                     </select>
                   </label>
                 </div>
-                <ThermalSelectionPanel operation={operation} qualityGoal={qualityGoal} labels={labels} />
+                {operation ? <ThermalSelectionPanel operation={operation} qualityGoal={qualityGoal} labels={labels} /> : null}
               </section>
-            ) : null}
 
-            {activeStep === "calibration" ? (
               <section className="mini-panel">
                 <h2>{labels.calibrationMode}</h2>
                 <label>
@@ -462,14 +459,17 @@ export function KerfAdvisor() {
                   <label><InfoLabel label={labels.cutLines} body={help("helpCutLines", labels.calibrationTest)} onOpen={setInfoModal} /><input type="number" step="1" value={cutLines} onChange={(event) => setCutLines(event.target.value)} /></label>
                 </div>
                 <CalibrationModeGraph mode={calibrationMode} labels={labels} />
+                <article className="info-box better-results-panel">
+                  <h2>{labels.betterResultsTitle}</h2>
+                  <p className="small"><strong>{labels.betterKerfCalibration}</strong> {labels.betterKerfCalibrationBody}</p>
+                  <p className="small"><strong>{labels.betterAlignmentTest}</strong> {labels.alignmentNineSpotTest}</p>
+                </article>
               </section>
-            ) : null}
 
-            {activeStep === "export" ? (
               <section className="mini-panel">
                 <h2>{labels.savedProfiles}</h2>
                 <div className="button-row">
-                  <button className="button" type="button" onClick={saveProfile}>{labels.saveProfile}</button>
+                  <button className="button" type="button" onClick={saveProfile} disabled={!result}>{labels.saveProfile}</button>
                   <button className="button secondary" type="button" onClick={() => setJsonData(JSON.stringify(customProfiles, null, 2))}>{labels.exportJson}</button>
                   <button className="button secondary" type="button" onClick={importJson}>{labels.importJson}</button>
                 </div>
@@ -479,9 +479,9 @@ export function KerfAdvisor() {
                 </label>
                 <p className="small">{labels.localStorageNote}</p>
               </section>
-            ) : null}
           </aside>
 
+          {result ? (
           <section className="stack">
             {result.blocked ? <div className="error">{labels.unknownPlasticBlocked}</div> : null}
             <div className="readouts">
@@ -490,7 +490,6 @@ export function KerfAdvisor() {
               <MetricCard label={labels.opticalTaper} value={labels[result.opticalTaperTendency]} sub={`${labels.symmetryError}: ${formatNumber(result.opticalSymmetryError * 100, 1)}%`} tone={result.opticalTaperTendency === "high" ? "warn filled" : "ok"} />
               <MetricCard label={labels.confidence} value={`${labels[result.confidence]} ${formatNumber(result.confidenceScore, 0)}/100`} sub={confidenceExplanation} />
             </div>
-            {activeStep === "optical" ? <RayleighRangeGraph profile={selectedProfile} labels={labels} /> : null}
             <div className="panels kerf-explain-grid">
               <article className="mini-panel"><h2>{labels.focusDepth}</h2><p className="small">{labels.focusDepthExplain}</p></article>
               <article className="mini-panel"><h2>{labels.opticalTaper}</h2><p className="small">{labels.opticalTaperExplain}</p></article>
@@ -520,6 +519,9 @@ export function KerfAdvisor() {
               <button className="button secondary" type="button" onClick={() => navigator.clipboard?.writeText(lightBurnNotes)}>{labels.copyNotes}</button>
             </div>
           </section>
+          ) : (
+            <section className="stack kerf-results-empty" aria-live="polite" />
+          )}
         </div>
       </section>
 
