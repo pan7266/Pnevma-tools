@@ -39,48 +39,35 @@ export function BeamPreview({
   onFocalLengthChange,
   expanded = false,
 }: Pick<GraphProps, "result" | "labels" | "unitSystem" | "onExpand" | "onFocalLengthChange" | "expanded">) {
-  const centerY = 126;
-  const startX = 34;
-  const lensX = 238;
-  const lensEntryX = lensX - 30;
-  const lensExitX = lensX + 28;
+  const centerY = 122;
+  const startX = 46;
+  const lensX = 286;
   const endX = 760;
   const focalOptions = FOCAL_LENGTHS.filter((option) => option.mm <= 228.6).map((option) => option.mm);
   const maxPresetFocal = Math.max(...focalOptions);
-  const focalScale = (endX - lensExitX - 70) / maxPresetFocal;
-  const focusX = clamp(lensExitX + result.focalLength * focalScale, lensExitX + 54, endX - 58);
+  const focalScale = (endX - lensX - 60) / maxPresetFocal;
+  const focusX = clamp(lensX + result.focalLength * focalScale, lensX + 44, endX - 48);
   const pxPerMm = Math.min(150 / Math.max(result.lensDiameter, result.expandedBeam, result.sourceBeam, 1), 7.8);
-  const lensHalf = clamp((result.lensDiameter * pxPerMm) / 2, 40, 78);
-  const rayCount = 9;
-  const raySpacing = clamp((result.effectiveBeam * pxPerMm) / (rayCount - 1), 9, 13);
-  const alignmentLineOffset = clamp(result.alignmentLoss / 0.04, 0, 2.25);
-  const alignmentOffset = -alignmentLineOffset * raySpacing;
-  const insideExitOffset = -alignmentOffset * 0.48;
-  const focusY = centerY - alignmentOffset * 0.65;
-  const terminalCenterY = focusY + (focusY - centerY) * 0.55;
-  const spotHalf = clamp(result.spot * 360, 3.2, 9);
-  const outputSpread = clamp(raySpacing * 1.25 + alignmentLineOffset * 2.5, 12, 24);
-  const rays = Array.from({ length: rayCount }, (_, index) => {
-    const offset = (index - (rayCount - 1) / 2) * raySpacing;
-    return {
-      index,
-      inputY: centerY + alignmentOffset + offset,
-      exitY: centerY + insideExitOffset + offset * 0.72,
-      focusY: focusY + offset * 0.05,
-      terminalY: terminalCenterY - offset * (outputSpread / Math.max(raySpacing * 4, 1)),
-    };
-  });
+  const incomingHalf = clamp((result.effectiveBeam * pxPerMm) / 2, 5, 58);
+  const lensHalf = clamp((result.lensDiameter * pxPerMm) / 2, 28, 76);
+  const beamAtLensHalf = clamp((result.effectiveBeam * pxPerMm) / 2, 4, Math.max(lensHalf - 5, 5));
+  const alignmentOffset = clamp(result.alignmentLoss * lensHalf * 1.4, -14, 14);
+  const incomingCenterY = centerY + alignmentOffset;
+  const lensCenterY = centerY + alignmentOffset;
+  const focusY = centerY + alignmentOffset * 0.78;
+  const exitSlope = (focusY - lensCenterY) / Math.max(focusX - lensX, 1);
+  const terminalCenterY = focusY + exitSlope * (endX - focusX) * 0.5;
+  const spotHalf = clamp(result.spot * 360, 3.2, 10);
+  const outputHalf = clamp(spotHalf + 6, 7, 18);
   const open = onExpand ? () => onExpand("beam") : undefined;
-  const rayColor = result.clipped ? "#ffd66b" : "#f2ff5c";
-  const paraxialColor = "rgba(125, 211, 252, 0.64)";
-  const labelFill = "#e5e7eb";
-  const mutedFill = "#a7b0c2";
+  const rayColor = result.clipped ? "var(--amber)" : "var(--beam)";
+  const paraxialColor = "var(--primary)";
   const focalDots = result.focalLength > maxPresetFocal ? [...focalOptions, result.focalLength] : focalOptions;
   const focalLabelY = 236;
   const convexLens = result.shape.labelKey === "convex";
   const lensPath = convexLens
-    ? `M${lensEntryX} ${centerY - lensHalf} C${lensExitX + 28} ${centerY - lensHalf * 0.62} ${lensExitX + 28} ${centerY + lensHalf * 0.62} ${lensEntryX} ${centerY + lensHalf} C${lensEntryX + 14} ${centerY + lensHalf * 0.35} ${lensEntryX + 14} ${centerY - lensHalf * 0.35} ${lensEntryX} ${centerY - lensHalf} Z`
-    : `M${lensEntryX} ${centerY - lensHalf} C${lensExitX + 16} ${centerY - lensHalf * 0.6} ${lensExitX + 16} ${centerY + lensHalf * 0.6} ${lensEntryX} ${centerY + lensHalf} L${lensExitX - 10} ${centerY + lensHalf} C${lensExitX + 6} ${centerY + lensHalf * 0.3} ${lensExitX + 6} ${centerY - lensHalf * 0.3} ${lensExitX - 10} ${centerY - lensHalf} Z`;
+    ? `M${lensX} ${centerY - lensHalf} C${lensX - 5} ${centerY - lensHalf * 0.55} ${lensX - 5} ${centerY + lensHalf * 0.55} ${lensX} ${centerY + lensHalf} C${lensX + 5} ${centerY + lensHalf * 0.55} ${lensX + 5} ${centerY - lensHalf * 0.55} ${lensX} ${centerY - lensHalf} Z`
+    : `M${lensX - 3} ${centerY - lensHalf} C${lensX - 8} ${centerY - lensHalf * 0.35} ${lensX - 8} ${centerY + lensHalf * 0.35} ${lensX - 3} ${centerY + lensHalf} C${lensX + 5} ${centerY + lensHalf * 0.35} ${lensX + 5} ${centerY - lensHalf * 0.35} ${lensX - 3} ${centerY - lensHalf} Z`;
   const focalButtonsEnabled = Boolean(onFocalLengthChange);
 
   return (
@@ -92,52 +79,44 @@ export function BeamPreview({
       onKeyDown={(event) => graphKeydown(event, open)}
     >
       <svg viewBox="0 0 800 260" role="img" aria-label={labels.beamPathTitle}>
-        <rect width="800" height="260" rx="8" fill="#020617" />
-        <line x1={startX} x2={endX} y1={centerY} y2={centerY} stroke="rgba(255,255,255,0.18)" strokeDasharray="5 7" />
-        <line x1={lensEntryX} x2={lensEntryX} y1={centerY - lensHalf - 12} y2={centerY + lensHalf + 12} stroke="rgba(255,255,255,0.18)" strokeWidth="0.8" />
+        <rect width="800" height="260" fill="transparent" />
+        <line x1={startX} x2={endX} y1={centerY} y2={centerY} stroke="var(--axis)" strokeDasharray="5 7" opacity="0.72" />
 
-        {rays.map((ray) => (
-          <g key={ray.index}>
-            <line x1={startX} x2={lensEntryX} y1={ray.inputY} y2={ray.inputY} stroke={rayColor} strokeWidth={ray.index === 4 ? 1.65 : 1.25} strokeLinecap="round" opacity={ray.index === 4 ? 0.98 : 0.86} />
-            <line x1={lensEntryX} x2={lensExitX} y1={ray.inputY} y2={ray.exitY} stroke={rayColor} strokeWidth={ray.index === 4 ? 1.55 : 1.1} strokeLinecap="round" opacity="0.48" />
-            <line x1={lensExitX} x2={focusX} y1={ray.exitY} y2={ray.focusY} stroke={rayColor} strokeWidth={ray.index === 4 ? 1.65 : 1.25} strokeLinecap="round" opacity={ray.index === 4 ? 0.98 : 0.86} />
-            <line x1={focusX} x2={endX} y1={ray.focusY} y2={ray.terminalY} stroke={rayColor} strokeWidth={ray.index === 4 ? 1.65 : 1.25} strokeLinecap="round" opacity={ray.index === 4 ? 0.98 : 0.86} />
-          </g>
-        ))}
-        <line x1={startX} x2={lensEntryX} y1={centerY + alignmentOffset} y2={centerY + alignmentOffset} stroke={paraxialColor} strokeWidth="1.1" strokeLinecap="round" />
-        <line x1={lensEntryX} x2={lensExitX} y1={centerY + alignmentOffset} y2={centerY + insideExitOffset} stroke={paraxialColor} strokeWidth="1.1" strokeLinecap="round" />
-        <line x1={lensExitX} x2={focusX} y1={centerY + insideExitOffset} y2={focusY} stroke={paraxialColor} strokeWidth="1.1" strokeLinecap="round" />
+        <path d={`M${startX} ${incomingCenterY - incomingHalf} L${lensX} ${incomingCenterY - incomingHalf} L${focusX} ${focusY - spotHalf} L${endX} ${terminalCenterY - outputHalf}`} fill="none" stroke={rayColor} strokeWidth="1.45" strokeLinecap="round" />
+        <path d={`M${startX} ${incomingCenterY + incomingHalf} L${lensX} ${incomingCenterY + incomingHalf} L${focusX} ${focusY + spotHalf} L${endX} ${terminalCenterY + outputHalf}`} fill="none" stroke={rayColor} strokeWidth="1.45" strokeLinecap="round" />
+        <path d={`M${startX} ${incomingCenterY} L${lensX} ${lensCenterY} L${focusX} ${focusY} L${endX} ${terminalCenterY}`} fill="none" stroke={paraxialColor} strokeWidth="1.1" strokeLinecap="round" opacity="0.72" />
 
-        <path d={lensPath} fill="rgba(148, 163, 184, 0.36)" stroke="rgba(226, 232, 240, 0.42)" strokeWidth="1.6" />
+        <path d={lensPath} fill="color-mix(in srgb, var(--primary) 34%, var(--panel-solid))" stroke="var(--primary)" strokeWidth="1.6" opacity="0.94" />
+        <line x1={lensX} x2={lensX} y1={centerY - lensHalf - 12} y2={centerY + lensHalf + 12} stroke="var(--line)" strokeWidth="0.8" />
 
-        <line x1={focusX} x2={focusX} y1={focusY - 38} y2={focusY + 38} stroke="#ff6b6f" strokeWidth="1.2" strokeDasharray="4 5" />
-        <circle cx={focusX} cy={focusY} r={Math.max(spotHalf, 3.6)} fill="#ff6b6f" opacity="0.94" />
-        <line x1={focusX - 14} x2={focusX + 14} y1={focusY} y2={focusY} stroke="#020617" strokeWidth="0.9" opacity="0.55" />
-        <line x1={focusX} x2={focusX} y1={focusY - 14} y2={focusY + 14} stroke="#020617" strokeWidth="0.9" opacity="0.55" />
+        <line x1={focusX} x2={focusX} y1={centerY - 40} y2={centerY + 40} stroke="var(--beam)" strokeWidth="1.4" strokeDasharray="4 5" />
+        <circle cx={focusX} cy={focusY} r={Math.max(spotHalf, 3.6)} fill="var(--beam)" opacity="0.92" />
+        <line x1={focusX - 14} x2={focusX + 14} y1={focusY} y2={focusY} stroke="var(--ink)" strokeWidth="0.9" opacity="0.5" />
+        <line x1={focusX} x2={focusX} y1={focusY - 14} y2={focusY + 14} stroke="var(--ink)" strokeWidth="0.9" opacity="0.5" />
 
-        <text x={startX} y="32" fill={mutedFill} fontSize="12">{labels.sourceBeam}: {formatLength(result.sourceBeam, unitSystem, 2)}</text>
-        <text x={startX} y="48" fill={mutedFill} fontSize="10.5">{labels.effectiveBeam}: {formatLength(result.effectiveBeam, unitSystem, 2)}</text>
-        <text x={lensX} y={Math.min(centerY + lensHalf + 28, 232)} fill={mutedFill} fontSize="12" textAnchor="middle">{labels.lens}: {formatLength(result.lensDiameter, unitSystem, 2)}</text>
-        <text x={focusX} y={Math.max(focusY - 42, 36)} fill={labelFill} fontSize="13" fontWeight="900" textAnchor="middle">
+        <text x={startX} y="32" fill="var(--muted)" fontSize="12">{labels.sourceBeam}: {formatLength(result.sourceBeam, unitSystem, 2)}</text>
+        <text x={startX} y="48" fill="var(--muted)" fontSize="10.5">{labels.effectiveBeam}: {formatLength(result.effectiveBeam, unitSystem, 2)}</text>
+        <text x={lensX} y={Math.min(centerY + lensHalf + 28, 232)} fill="var(--muted)" fontSize="12" textAnchor="middle">{labels.lens}: {formatLength(result.lensDiameter, unitSystem, 2)}</text>
+        <text x={focusX} y={Math.max(focusY - 42, 36)} fill="var(--ink)" fontSize="13" fontWeight="900" textAnchor="middle">
           {labels.spotDiameter}: {formatLength(result.spot, unitSystem, 4)}
         </text>
-        <text x={focusX} y={Math.min(focusY + 58, 232)} fill={mutedFill} fontSize="11" textAnchor="middle">
+        <text x={focusX} y={Math.min(focusY + 58, 236)} fill="var(--muted)" fontSize="11" textAnchor="middle">
           {labels.focalLength}: {formatLength(result.focalLength, unitSystem, 2)}
         </text>
-        <text x={endX} y="32" fill={mutedFill} fontSize="12" textAnchor="end">
+        <text x={endX} y="32" fill="var(--muted)" fontSize="12" textAnchor="end">
           {labels.effectiveBeam}: {formatLength(result.effectiveBeam, unitSystem, 2)}
         </text>
         {result.alignmentLoss > 0 ? (
-          <text x={lensX} y={Math.max(centerY - lensHalf - 20, 30)} fill="#fbbf24" fontSize="11" textAnchor="middle">
-            {labels.alignmentImpact}: {formatCompact(result.alignmentLoss * 100, 1)}% / {formatCompact(alignmentLineOffset, 1)} ray spacing
+          <text x={lensX} y={Math.max(centerY - lensHalf - 20, 30)} fill="var(--amber)" fontSize="11" textAnchor="middle">
+            {labels.alignmentImpact}: {formatCompact(result.alignmentLoss * 100, 1)}%
           </text>
         ) : null}
-        <text x={endX} y="48" fill={mutedFill} fontSize="10.5" textAnchor="end">
+        <text x={endX} y="48" fill="var(--muted)" fontSize="10.5" textAnchor="end">
           {labels.opticalTaper}: {labels[result.beamStability]}
         </text>
-        <line x1={lensExitX} x2={endX - 20} y1={focalLabelY} y2={focalLabelY} stroke="rgba(255,255,255,0.16)" />
+        <line x1={lensX} x2={endX - 20} y1={focalLabelY} y2={focalLabelY} stroke="var(--grid)" />
         {focalDots.map((focal) => {
-          const x = clamp(lensExitX + focal * focalScale, lensExitX + 8, endX - 18);
+          const x = clamp(lensX + focal * focalScale, lensX + 8, endX - 18);
           const selected = Math.abs(focal - result.focalLength) < 0.02;
           return (
             <g
@@ -157,11 +136,11 @@ export function BeamPreview({
                 onFocalLengthChange(focal);
               }}
             >
-              <rect x={x - 14} y={focalLabelY - 14} width="28" height="28" rx="14" fill="transparent" stroke={selected ? "#ff6b6f" : "rgba(255,255,255,0.28)"} strokeWidth={selected ? "1.2" : "0.8"} opacity={selected ? 0.8 : 0.38} />
-              <circle cx={x} cy={focalLabelY} r={selected ? 5 : 3.2} fill={selected ? "#ff6b6f" : "#7dd3fc"} opacity={selected ? 1 : 0.72}>
+              <rect x={x - 14} y={focalLabelY - 14} width="28" height="28" rx="14" fill="transparent" stroke={selected ? "var(--beam)" : "var(--line)"} strokeWidth={selected ? "1.2" : "0.8"} opacity={selected ? 0.8 : 0.38} />
+              <circle cx={x} cy={focalLabelY} r={selected ? 5 : 3.2} fill={selected ? "var(--beam)" : "var(--primary)"} opacity={selected ? 1 : 0.72}>
                 <title>{labels.focalLength}: {formatLength(focal, unitSystem, 2)}</title>
               </circle>
-              {selected || expanded ? <text x={x} y={focalLabelY - 9} fill={mutedFill} fontSize="9" textAnchor="middle">{formatLength(focal, unitSystem, 1)}</text> : null}
+              {selected || expanded ? <text x={x} y={focalLabelY - 9} fill="var(--muted)" fontSize="9" textAnchor="middle">{formatLength(focal, unitSystem, 1)}</text> : null}
             </g>
           );
         })}
