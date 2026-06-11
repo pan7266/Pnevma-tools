@@ -41,3 +41,15 @@ export function KerfIcon() {
     </svg>
   );
 }
+
+export function LaserCoachIcon() {
+  return (
+    <svg viewBox="0 0 64 64" aria-hidden="true">
+      <path d="M11 47h42" fill="none" stroke="#66a3ff" strokeWidth="4" strokeLinecap="round" />
+      <path d="M17 17h30v20H17z" fill="rgba(102,163,255,.2)" stroke="#66a3ff" strokeWidth="3" strokeLinejoin="round" />
+      <path d="M25 37l14-20" fill="none" stroke="#ff6b6f" strokeWidth="4" strokeLinecap="round" />
+      <path d="M22 47l8-10h14l8 10" fill="none" stroke="#f5b45b" strokeWidth="3" strokeLinejoin="round" />
+      <circle cx="39" cy="17" r="4" fill="#ffffff" />
+    </svg>
+  );
+}

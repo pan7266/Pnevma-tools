@@ -97,7 +97,7 @@ export function BeamPreview({
         <text x={startX} y="32" fill="var(--muted)" fontSize="12">{labels.sourceBeam}: {formatLength(result.sourceBeam, unitSystem, 2)}</text>
         <text x={startX} y="48" fill="var(--muted)" fontSize="10.5">{labels.effectiveBeam}: {formatLength(result.effectiveBeam, unitSystem, 2)}</text>
         <text x={lensX} y={Math.min(centerY + lensHalf + 28, 232)} fill="var(--muted)" fontSize="12" textAnchor="middle">{labels.lens}: {formatLength(result.lensDiameter, unitSystem, 2)}</text>
-        <text x={focusX} y={Math.max(focusY - 42, 36)} fill="var(--ink)" fontSize="13" fontWeight="900" textAnchor="middle">
+        <text x={focusX} y={Math.max(focusY - 42, 36)} fill="var(--ink)" fontSize="13" fontWeight="800" textAnchor="middle">
           {labels.spotDiameter}: {formatLength(result.spot, unitSystem, 4)}
         </text>
         <text x={focusX} y={Math.min(focusY + 58, 236)} fill="var(--muted)" fontSize="11" textAnchor="middle">
@@ -309,7 +309,7 @@ export function MirrorFinishPreview({
         </g>
         <path d="M28 58 H70 M150 58 H194" fill="none" stroke="var(--beam)" strokeWidth="2" strokeLinecap="round" />
         <text x="110" y="112" fill="var(--muted)" fontSize="10.5" textAnchor="middle">{label}</text>
-        <text x="110" y="126" fill="var(--ink)" fontSize="10.5" fontWeight="900" textAnchor="middle">
+        <text x="110" y="126" fill="var(--ink)" fontSize="10.5" fontWeight="800" textAnchor="middle">
           {formatLength(diameterMm, unitSystem, 2)}
         </text>
       </svg>
@@ -334,7 +334,7 @@ export function ExpanderGraph({ result, labels, unitSystem, onExpand }: Pick<Gra
         <rect x="288" y="28" width="44" height="114" rx="8" fill="color-mix(in srgb, var(--green) 20%, var(--panel-solid))" stroke="var(--green)" />
         <text x="32" y="24" fill="var(--muted)" fontSize="11">{labels.sourceBeam}: {formatLength(result.sourceBeam, unitSystem, 2)}</text>
         <text x="488" y="24" fill={result.clipped ? "var(--amber)" : "var(--muted)"} fontSize="11" textAnchor="end">{labels.expandedBeam}: {formatLength(result.expandedBeam, unitSystem, 2)}</text>
-        {result.clipped ? <text x="260" y="156" fill="var(--amber)" fontSize="12" fontWeight="900" textAnchor="middle">{labels.expandedTooLarge}</text> : null}
+        {result.clipped ? <text x="260" y="156" fill="var(--amber)" fontSize="12" fontWeight="800" textAnchor="middle">{labels.expandedTooLarge}</text> : null}
       </svg>
     </div>
   );
@@ -421,7 +421,7 @@ export function OpticalPathGraph({ result, labels, unitSystem, onExpand, expande
             <circle cx={x} cy={y} r={stage.kind === "mirror" ? 15 : 1} fill="transparent">
               <title>{labels[stage.labelKey]} · {labels.energyAfterStage}: {formatCompact(stage.energyWatt, 2)} W</title>
             </circle>
-            <text x={label.x} y={label.y} fill="var(--ink)" fontSize="10.5" fontWeight="900" textAnchor={label.anchor}>{labels[stage.labelKey]}</text>
+            <text x={label.x} y={label.y} fill="var(--ink)" fontSize="10.5" fontWeight="800" textAnchor={label.anchor}>{labels[stage.labelKey]}</text>
             <text x={label.x} y={label.y + 15} fill="var(--muted)" fontSize="9.5" textAnchor={label.anchor}>
               {formatCompact(stage.energyPercent, 1)}% · {formatLength(stage.beamMm, unitSystem, stage.kind === "surface" ? 4 : 2)}
             </text>
@@ -465,7 +465,7 @@ export function PowerPathGraph({ result, labels, onExpand, expanded = false }: P
     >
       <svg viewBox="0 0 800 202" role="img" aria-label={labels.pathGraphTitle}>
         <rect width="800" height="202" fill="transparent" />
-        <text x="44" y="44" fill="var(--ink)" fontSize="15" fontWeight="900">{labels.pathGraphTitle}</text>
+        <text x="44" y="44" fill="var(--ink)" fontSize="15" fontWeight="800">{labels.pathGraphTitle}</text>
         <text x="44" y="68" fill="var(--muted)" fontSize="12">
           {formatCompact(result.selectedWatt, 2)} W {"->"} {formatCompact(result.deliveredWatt, 2)} W
         </text>
@@ -476,7 +476,7 @@ export function PowerPathGraph({ result, labels, onExpand, expanded = false }: P
         <text x="318" y="154" fill="var(--muted)" fontSize="12">{labels.pathLoss}: {formatCompact(result.pathTransmission * 100, 1)}%</text>
         <circle cx="686" cy="110" r="34" fill={statusColor} opacity="0.18" />
         <circle cx="686" cy="110" r="18" fill={statusColor} />
-        <text x="686" y="154" fill="var(--ink)" fontSize="12" fontWeight="900" textAnchor="middle">{labels[result.beamStability]}</text>
+        <text x="686" y="154" fill="var(--ink)" fontSize="12" fontWeight="800" textAnchor="middle">{labels[result.beamStability]}</text>
       </svg>
     </div>
   );

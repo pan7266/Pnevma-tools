@@ -125,7 +125,7 @@ function FieldLabel({
   return (
     <span className="label-line">
       {children}
-      {info[infoKey] ? <InfoButton title={String(children)} body={info[infoKey]} onOpen={onOpen} /> : null}
+      <InfoButton title={String(children)} body={info[infoKey] || "What it is: a calculator input. Why it is needed: the spot estimate needs this context to avoid hidden assumptions."} onOpen={onOpen} />
       <span className="sr-only">{labels.why}</span>
     </span>
   );
@@ -367,9 +367,9 @@ export function SpotCalculator() {
           </div>
           <div>
             <h1>{labels.title}</h1>
-            <p className="subhead">{labels.subtitle}</p>
           </div>
         </div>
+        <a className="tool-doc-link" href="/docs/spot">Description</a>
       </header>
 
       <section className="panel panel-pad toolbar spot-source-toolbar" aria-label={labels.spotHeaderTitle}>
@@ -600,7 +600,7 @@ export function SpotCalculator() {
                 <FieldLabel infoKey="extractorOn" labels={labels} info={info} onOpen={setModal}>{labels.extractorOn}</FieldLabel>
               </label>
               <label className="compact-select-only">
-                <span className="sr-only">{labels.extractorStrength}</span>
+                <FieldLabel infoKey="extractorStrength" labels={labels} info={info} onOpen={setModal}>{labels.extractorStrength}</FieldLabel>
                 <select value={values.extractorStrength} onChange={(event) => updateField("extractorStrength", event.target.value)}>
                   <option value="weak">{labels.weak}</option>
                   <option value="normal">{labels.normal}</option>

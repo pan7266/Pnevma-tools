@@ -33,7 +33,8 @@ const BELT_PITCH_PRESETS = [
 ] as const;
 
 function format(value: number | null | undefined, decimals = 4, fallback = "N/A"): string {
-  return Number.isFinite(value) ? Number(value).toFixed(decimals) : fallback;
+  const safeDecimals = Math.min(Math.max(decimals, 0), 2);
+  return Number.isFinite(value) ? Number(value).toFixed(safeDecimals) : fallback;
 }
 
 function parsePositive(value: NumericInput): number | null {
@@ -462,9 +463,9 @@ export function AxisCalculator() {
           </div>
           <div>
             <h1>{labels.title}</h1>
-            <p className="subhead">{labels.subtitle}</p>
           </div>
         </div>
+        <a className="tool-doc-link" href="/docs/axis">Description</a>
       </header>
 
       <section className="panel panel-pad toolbar axis-toolbar" aria-label={labels.lineIntervalOrDpi}>

@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { useAppSettings } from "@/components/AppSettings";
 import { LanguageToggle } from "@/components/LanguageToggle";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { AxisIcon, KerfIcon, PnevmaMark, SpotIcon } from "@/components/ToolIcons";
+import { AxisIcon, KerfIcon, LaserCoachIcon, PnevmaMark, SpotIcon } from "@/components/ToolIcons";
 import { UnitToggle } from "@/components/UnitToggle";
 import { getLocale } from "@/locales";
 
@@ -31,6 +31,13 @@ function getTools(labels: Record<string, string>) {
     name: labels.kerfToolName,
     meta: labels.kerfToolMeta,
     icon: <KerfIcon />,
+  },
+  {
+    href: "/lasercoach",
+    key: "lasercoach",
+    name: labels.laserCoachToolName || "Triple Factor Laser Coach",
+    meta: labels.laserCoachToolMeta || "Machine, optics, vector, feedback",
+    icon: <LaserCoachIcon />,
   },
   ];
 }

@@ -447,3 +447,271 @@ export type UserMaterialProfile = {
   createdAt: string;
   updatedAt: string;
 };
+
+export type LaserControllerType = "Ruida" | "Trocen" | "GRBL" | "Smoothieware" | "Other" | string;
+export type LaserMotionProfileSource = "Manual" | "LightBurnExport" | "RuidaReadout" | "ImportedJson";
+export type LaserMaterialFamily =
+  | "CastAcrylic"
+  | "XtAcrylic"
+  | "MirrorAcrylic"
+  | "BirchPlywood"
+  | "IlombaPlywood"
+  | "Mdf"
+  | "PaintedMdf"
+  | "Veneer"
+  | "Leather"
+  | "Fabric"
+  | "Other"
+  | string;
+export type LaserOperationType = "Cut" | "Score" | "LineEngrave" | "FillEngrave" | "PhotoEngrave" | "Mark";
+export type LaserAirAssist = "Off" | "Low" | "Medium" | "High" | string;
+export type LaserDesiredQuality = "Fast" | "Balanced" | "CleanEdge" | "DeepEngrave" | "FineDetail";
+export type LaserFileType = "Svg" | "Dxf" | "Pdf" | "Ai" | "Unknown";
+export type LaserGeometryRiskLevel = "Low" | "Medium" | "High";
+export type LaserProblemType =
+  | "None"
+  | "DidNotCutThrough"
+  | "AlmostCutThrough"
+  | "TooMuchMelting"
+  | "BurnedCorners"
+  | "SmokeStaining"
+  | "EngravingTooLight"
+  | "EngravingTooDark"
+  | "Banding"
+  | "LostSteps"
+  | "DetailDestroyed"
+  | "ExcessiveCharring"
+  | "Warping"
+  | "WrongScale"
+  | "Other";
+
+export interface LaserMachine {
+  id: string;
+  ownerUserId: string;
+  name: string;
+  controllerType: LaserControllerType;
+  controllerModel?: string | null;
+  bedWidthMm: number;
+  bedHeightMm: number;
+  tubePowerW: number;
+  realMeasuredMaxPowerW?: number | null;
+  defaultLensFocalLengthMm: number;
+  defaultLensDiameterMm?: number | null;
+  defaultKerfMm: number;
+  defaultFocusOffsetMm: number;
+  nozzleType?: string | null;
+  airAssistType?: string | null;
+  exhaustNotes?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface MachineMotionProfile {
+  id: string;
+  laserMachineId: string;
+  profileName: string;
+  maxSpeedMmSec: number;
+  maxAccelerationMmSec2: number;
+  idleSpeedMmSec: number;
+  idleAccelerationMmSec2: number;
+  cutAccelerationMmSec2: number;
+  scanAccelerationMmSec2?: number | null;
+  engraveAccelerationMmSec2?: number | null;
+  jumpOffSpeedMmSec?: number | null;
+  startSpeedMmSec?: number | null;
+  cornerSpeedMmSec?: number | null;
+  accelFactorPercent: number;
+  g0AccelFactorPercent: number;
+  speedFactorPercent: number;
+  source: LaserMotionProfileSource;
+  notes?: string | null;
+  isDefault: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface LaserMaterial {
+  id: string;
+  name: string;
+  family: LaserMaterialFamily;
+  thicknessMm: number;
+  color?: string | null;
+  finish?: string | null;
+  supplier?: string | null;
+  materialCode?: string | null;
+  densityHint?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface LaserOperationPreset {
+  id: string;
+  materialId: string;
+  operationType: LaserOperationType;
+  lensFocalLengthMm: number;
+  baseSpeedMmSec: number;
+  baseMinPowerPercent: number;
+  baseMaxPowerPercent: number;
+  passes: number;
+  lineIntervalMm?: number | null;
+  dpi?: number | null;
+  airAssist: LaserAirAssist;
+  focusOffsetMm: number;
+  notes?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface VectorJob {
+  id: string;
+  ownerUserId: string;
+  laserMachineId: string;
+  motionProfileId: string;
+  fileName: string;
+  fileType: LaserFileType;
+  originalFilePath?: string | null;
+  fileBlobReference?: string | null;
+  declaredWidthMm: number;
+  declaredHeightMm: number;
+  detectedWidthMm?: number | null;
+  detectedHeightMm?: number | null;
+  scaleFactor?: number | null;
+  operationType: LaserOperationType;
+  materialId: string;
+  lensFocalLengthMm: number;
+  desiredQuality: LaserDesiredQuality;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface VectorAnalysis {
+  id: string;
+  vectorJobId: string;
+  totalCutLengthMm: number;
+  totalScoreLengthMm?: number | null;
+  estimatedEngraveAreaMm2?: number | null;
+  pathCount: number;
+  openPathCount: number;
+  closedPathCount: number;
+  duplicateLineCount: number;
+  tinyFeatureCount: number;
+  smallestFeatureMm?: number | null;
+  smallestGapMm?: number | null;
+  sharpCornerCount: number;
+  curveSegmentCount: number;
+  boundingBoxWidthMm: number;
+  boundingBoxHeightMm: number;
+  hasUnsupportedElements: boolean;
+  warningsJson: string[];
+  createdAt: string;
+}
+
+export interface LaserMachineMotionSnapshot {
+  maxSpeedMmSec: number;
+  maxAccelerationMmSec2: number;
+  idleSpeedMmSec: number;
+  idleAccelerationMmSec2: number;
+  cutAccelerationMmSec2: number;
+  scanAccelerationMmSec2?: number | null;
+  engraveAccelerationMmSec2?: number | null;
+  jumpOffSpeedMmSec?: number | null;
+  startSpeedMmSec?: number | null;
+  cornerSpeedMmSec?: number | null;
+  accelFactorPercent: number;
+  g0AccelFactorPercent: number;
+  speedFactorPercent: number;
+  controllerType: LaserControllerType;
+  controllerModel?: string | null;
+  bedWidthMm: number;
+  bedHeightMm: number;
+  tubePowerW: number;
+  realMeasuredMaxPowerW?: number | null;
+  lensFocalLengthMm: number;
+  lensDiameterMm?: number | null;
+  nozzleType?: string | null;
+  airAssistType?: string | null;
+  exhaustNotes?: string | null;
+  kerfMm: number;
+  defaultFocusOffsetMm: number;
+}
+
+export interface LaserRecommendation {
+  id: string;
+  vectorJobId: string;
+  laserMachineId: string;
+  motionProfileId: string;
+  materialId: string;
+  operationType: LaserOperationType;
+  recommendedSpeedMmSec: number;
+  recommendedMinPowerPercent: number;
+  recommendedMaxPowerPercent: number;
+  recommendedPasses: number;
+  recommendedLineIntervalMm?: number | null;
+  recommendedDpi?: number | null;
+  recommendedFocusOffsetMm: number;
+  recommendedAirAssist: LaserAirAssist;
+  estimatedTimeSeconds?: number | null;
+  geometryRiskLevel: LaserGeometryRiskLevel;
+  recommendationReasoningJson: {
+    baseSpeedMmSec: number;
+    correctionSpeedMultiplier: number;
+    geometrySpeedMultiplier: number;
+    desiredQualityMultiplier: number;
+    geometryPowerBiasPercent: number;
+    geometryPassBias: number;
+    operationSpeedLimitMmSec: number;
+    warnings: string[];
+  };
+  machineMotionSnapshotJson: LaserMachineMotionSnapshot;
+  createdAt: string;
+}
+
+export interface LaserJobFeedback {
+  id: string;
+  recommendationId: string;
+  ownerUserId: string;
+  wasSuccessful: boolean;
+  problemType: LaserProblemType;
+  severity: number;
+  userComment?: string | null;
+  actualSpeedMmSec?: number | null;
+  actualMinPowerPercent?: number | null;
+  actualMaxPowerPercent?: number | null;
+  actualPasses?: number | null;
+  actualLineIntervalMm?: number | null;
+  actualFocusOffsetMm?: number | null;
+  actualAirAssist?: LaserAirAssist | null;
+  resultPhotoPath?: string | null;
+  createdAt: string;
+}
+
+export interface MachineMaterialCorrection {
+  id: string;
+  laserMachineId: string;
+  materialId: string;
+  operationType: LaserOperationType;
+  lensFocalLengthMm: number;
+  speedMultiplier: number;
+  minPowerBiasPercent: number;
+  maxPowerBiasPercent: number;
+  passBias: number;
+  focusBiasMm: number;
+  lineIntervalMultiplier?: number | null;
+  confidenceScore: number;
+  samplesCount: number;
+  lastFeedbackAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CorrectionHistory {
+  id: string;
+  correctionId: string;
+  feedbackId: string;
+  recommendationId: string;
+  beforeJson: MachineMaterialCorrection;
+  afterJson: MachineMaterialCorrection;
+  reason: string;
+  warnings: string[];
+  createdAt: string;
+}

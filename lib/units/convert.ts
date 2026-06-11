@@ -8,18 +8,23 @@ export function inchesToMm(inches: number): number {
   return inches * 25.4;
 }
 
+function displayDigits(digits: number): number {
+  return Math.min(Math.max(digits, 0), 2);
+}
+
 export function formatNumber(value: number, digits = 3): string {
   if (!Number.isFinite(value)) return "0";
+  const safeDigits = displayDigits(digits);
   return value.toLocaleString(undefined, {
-    maximumFractionDigits: digits,
-    minimumFractionDigits: digits,
+    maximumFractionDigits: safeDigits,
+    minimumFractionDigits: safeDigits,
   });
 }
 
 export function formatCompact(value: number, digits = 1): string {
   if (!Number.isFinite(value)) return "0";
   return value.toLocaleString(undefined, {
-    maximumFractionDigits: digits,
+    maximumFractionDigits: displayDigits(digits),
   });
 }
 
@@ -49,7 +54,7 @@ export function displayLengthValue(mm: unknown, unitSystem: UnitSystem = "metric
   const parsed = Number(String(mm).replace(",", "."));
   if (!Number.isFinite(parsed)) return "";
   const displayValue = unitSystem === "imperial" ? mmToInches(parsed) : parsed;
-  return Number(displayValue.toFixed(digits)).toString();
+  return Number(displayValue.toFixed(displayDigits(digits))).toString();
 }
 
 export function parseLengthValue(value: string, unitSystem: UnitSystem = "metric"): string {
@@ -72,7 +77,7 @@ export function displayTemperatureValue(celsius: unknown, unitSystem: UnitSystem
   const parsed = Number(String(celsius).replace(",", "."));
   if (!Number.isFinite(parsed)) return "";
   const displayValue = unitSystem === "imperial" ? celsiusToFahrenheit(parsed) : parsed;
-  return Number(displayValue.toFixed(digits)).toString();
+  return Number(displayValue.toFixed(displayDigits(digits))).toString();
 }
 
 export function parseTemperatureValue(value: string, unitSystem: UnitSystem = "metric"): string {
@@ -93,7 +98,7 @@ export function displayStepsPerLengthValue(stepsPerMm: unknown, unitSystem: Unit
   const parsed = Number(String(stepsPerMm).replace(",", "."));
   if (!Number.isFinite(parsed)) return "";
   const displayValue = unitSystem === "imperial" ? parsed * 25.4 : parsed;
-  return Number(displayValue.toFixed(digits)).toString();
+  return Number(displayValue.toFixed(displayDigits(digits))).toString();
 }
 
 export function parseStepsPerLengthValue(value: string, unitSystem: UnitSystem = "metric"): string {

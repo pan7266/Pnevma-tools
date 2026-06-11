@@ -40,7 +40,7 @@ export function AxisIntervalGraph({
     >
       <svg viewBox="0 0 820 220" role="img" aria-label={labels.intervalGraphTitle}>
         <rect width="820" height="220" fill="transparent" />
-        <text x="32" y="36" fill="var(--ink)" fontSize="15" fontWeight="900">
+        <text x="32" y="36" fill="var(--ink)" fontSize="15" fontWeight="800">
           {interval.clean ? labels.cleanHeadline : labels.notCleanHeadline}
         </text>
         <text x="32" y="60" fill="var(--muted)" fontSize="12">
@@ -147,7 +147,7 @@ export function EngravingLineGraph({
               <title>{line.label}: {formatLength(line.value, unitSystem, 4)}</title>
             </line>
             <circle cx={line.x} cy="252" r={selected === line.id ? 7 : 5} fill={line.color} stroke="var(--panel-solid)" strokeWidth="2" />
-            <text x={line.x} y={line.id === "nearest" ? 286 : 274} fill={line.color} fontSize="11" fontWeight="900" textAnchor="middle">
+            <text x={line.x} y={line.id === "nearest" ? 286 : 274} fill={line.color} fontSize="11" fontWeight="800" textAnchor="middle">
               {line.id === "dpi" && !mismatch ? "" : line.label}
             </text>
           </g>
@@ -155,7 +155,7 @@ export function EngravingLineGraph({
         {mismatch ? (
           <g>
             <path d={`M${graph.requestedX} 78 C${(graph.requestedX + graph.nearestX) / 2} 54 ${(graph.requestedX + graph.nearestX) / 2} 54 ${graph.nearestX} 78`} fill="none" stroke="var(--amber)" strokeWidth="2" strokeDasharray="5 5" />
-            <text x={(graph.requestedX + graph.nearestX) / 2} y="50" fill="var(--amber)" fontSize="12" fontWeight="900" textAnchor="middle">
+            <text x={(graph.requestedX + graph.nearestX) / 2} y="50" fill="var(--amber)" fontSize="12" fontWeight="800" textAnchor="middle">
               {labels.deviation}: {formatLength(Math.abs(interval.errorMm), unitSystem, 4)} / {formatCompact(Math.abs(interval.errorPercent), 3)}%
             </text>
           </g>

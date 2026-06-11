@@ -123,9 +123,9 @@ function BeamMaterialGraph({ result, thicknessMm, labels }: { result: KerfAdviso
         <text x={slab.x - 52} y={slab.y + slab.h / 2 + 4} fill="var(--ink)" fontSize="12" textAnchor="end">{labels.middle}</text>
         <text x={slab.x - 52} y={slab.y + slab.h + 5} fill="var(--ink)" fontSize="12" textAnchor="end">{labels.bottomExit}</text>
         <text x={slab.x + slab.w + 48} y={focusLineY + 4} fill="var(--green)" fontSize="12">{labels.focusDepth}: {result.recommendedFocusDepthMm.toFixed(2)} mm</text>
-        <text x={slab.x + slab.w + 48} y={slab.y + 6} fill="var(--muted)" fontSize="11">{result.topDiameterMm.toFixed(4)} mm</text>
-        <text x={slab.x + slab.w + 48} y={slab.y + slab.h / 2 + 4} fill="var(--muted)" fontSize="11">{result.middleDiameterMm.toFixed(4)} mm</text>
-        <text x={slab.x + slab.w + 48} y={slab.y + slab.h + 5} fill="var(--muted)" fontSize="11">{result.bottomDiameterMm.toFixed(4)} mm</text>
+        <text x={slab.x + slab.w + 48} y={slab.y + 6} fill="var(--muted)" fontSize="11">{result.topDiameterMm.toFixed(2)} mm</text>
+        <text x={slab.x + slab.w + 48} y={slab.y + slab.h / 2 + 4} fill="var(--muted)" fontSize="11">{result.middleDiameterMm.toFixed(2)} mm</text>
+        <text x={slab.x + slab.w + 48} y={slab.y + slab.h + 5} fill="var(--muted)" fontSize="11">{result.bottomDiameterMm.toFixed(2)} mm</text>
       </svg>
     </div>
   );
@@ -159,9 +159,9 @@ function RayleighRangeGraph({ profile, labels }: { profile: OpticalProfile; labe
         <line x1={centerX} x2={centerX} y1="36" y2="140" stroke="var(--green)" strokeWidth="1.4" />
         <line x1={leftZR} x2={leftZR} y1="48" y2="128" stroke="var(--primary)" strokeDasharray="5 6" />
         <line x1={rightZR} x2={rightZR} y1="48" y2="128" stroke="var(--primary)" strokeDasharray="5 6" />
-        <text x={centerX} y="30" fill="var(--ink)" fontSize="12" fontWeight="900" textAnchor="middle">waist {profile.measuredSpotDiameterUm.toFixed(1)} µm</text>
-        <text x={leftZR} y="148" fill="var(--muted)" fontSize="11" textAnchor="middle">-zR {zR.toFixed(4)} mm</text>
-        <text x={rightZR} y="148" fill="var(--muted)" fontSize="11" textAnchor="middle">+zR {zR.toFixed(4)} mm</text>
+        <text x={centerX} y="30" fill="var(--ink)" fontSize="12" fontWeight="800" textAnchor="middle">waist {profile.measuredSpotDiameterUm.toFixed(1)} µm</text>
+        <text x={leftZR} y="148" fill="var(--muted)" fontSize="11" textAnchor="middle">-zR {zR.toFixed(2)} mm</text>
+        <text x={rightZR} y="148" fill="var(--muted)" fontSize="11" textAnchor="middle">+zR {zR.toFixed(2)} mm</text>
       </svg>
     </div>
   );
@@ -182,7 +182,7 @@ function CalibrationModeGraph({ mode, labels }: { mode: KerfCalibrationMode; lab
       </div>
       <svg className="graph" viewBox={`0 0 ${width} ${height}`} role="img" aria-label={title}>
         <rect width={width} height={height} fill="transparent" />
-        <text x="24" y="28" fill="var(--ink)" fontSize="14" fontWeight="900">{title}</text>
+        <text x="24" y="28" fill="var(--ink)" fontSize="14" fontWeight="800">{title}</text>
         {mode === "multi_line_strip" ? Array.from({ length: 7 }, (_, index) => (
           <line key={index} x1={110 + index * 32} x2={110 + index * 32} y1="50" y2="142" stroke={index % 2 ? "var(--beam)" : "var(--primary)"} strokeWidth="2" />
         )) : null}
@@ -496,9 +496,9 @@ export function KerfAdvisor() {
           <div className="brand-mark" aria-hidden="true"><KerfIcon /></div>
           <div>
             <h1>{labels.title}</h1>
-            <p className="subhead">{labels.subtitle}</p>
           </div>
         </div>
+        <a className="tool-doc-link" href="/docs/kerf">Description</a>
       </header>
 
       <section className="panel panel-pad kerf-workbench">

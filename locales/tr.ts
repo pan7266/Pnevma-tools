@@ -50,6 +50,8 @@ export const tr: LocalePack = {
     "axisToolMeta": "Mikroadım, DPI, motorlar, temiz çizgi",
     "kerfToolName": "Kerf ve odak derinliği",
     "kerfToolMeta": "Odak beli, malzeme kerfi, LightBurn notları",
+    "laserCoachToolName": "Uc faktorlu laser kocu",
+    "laserCoachToolMeta": "Makine, optik, vektor, geri bildirim",
     "light": "Açık",
     "dark": "Koyu",
     "metric": "Metrik",

@@ -54,7 +54,8 @@ body {
 
 body {
   color: var(--ink);
-  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-family: var(--font-open-sans), "Open Sans", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-weight: 300;
   background:
     radial-gradient(circle at 10% 4%, rgba(31, 111, 235, 0.16), transparent 30%),
     radial-gradient(circle at 88% 12%, rgba(11, 143, 106, 0.14), transparent 28%),
@@ -63,7 +64,8 @@ body {
 
 button,
 input,
-select {
+select,
+textarea {
   font: inherit;
 }
 
@@ -73,6 +75,11 @@ button {
 
 a {
   color: var(--primary);
+}
+
+svg text {
+  font-family: var(--font-open-sans), "Open Sans", ui-sans-serif, system-ui, sans-serif;
+  font-weight: 300;
 }
 
 .sr-only {
@@ -212,7 +219,7 @@ a {
 }
 
 .tool-name {
-  font-weight: 900;
+  font-weight: 800;
   font-size: 0.92rem;
 }
 
@@ -245,7 +252,7 @@ a {
   margin: 0 0 6px;
   color: var(--muted);
   font-size: 0.74rem;
-  font-weight: 900;
+  font-weight: 800;
   text-transform: uppercase;
 }
 
@@ -305,7 +312,7 @@ a {
 }
 
 .app-footer a {
-  font-weight: 850;
+  font-weight: 800;
   text-decoration: none;
 }
 
@@ -359,6 +366,29 @@ h3 {
   line-height: 1.45;
 }
 
+.tool-doc-link {
+  align-self: center;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 38px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 0 13px;
+  color: var(--primary);
+  background: var(--panel-solid);
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.tool-doc-link:hover,
+.tool-doc-link:focus-visible {
+  border-color: color-mix(in srgb, var(--primary) 45%, var(--line));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 14%, transparent);
+}
+
 .layout {
   display: grid;
   grid-template-columns: minmax(420px, 1.16fr) minmax(480px, 1.42fr) minmax(260px, 330px);
@@ -408,7 +438,7 @@ details > summary {
   min-height: 48px;
   padding: 0 14px;
   cursor: pointer;
-  font-weight: 900;
+  font-weight: 800;
   list-style: none;
 }
 
@@ -621,7 +651,7 @@ input[type="range"] {
   background: var(--panel-solid);
   cursor: pointer;
   font-size: 0.76rem;
-  font-weight: 950;
+  font-weight: 800;
   line-height: 1;
 }
 
@@ -656,7 +686,7 @@ input[type="range"] {
   color: var(--primary-ink);
   background: var(--primary);
   cursor: pointer;
-  font-weight: 900;
+  font-weight: 800;
 }
 
 .button.secondary,
@@ -684,7 +714,7 @@ input[type="range"] {
   color: var(--primary);
   cursor: pointer;
   font-size: 0.78rem;
-  font-weight: 900;
+  font-weight: 800;
   line-height: 1;
 }
 
@@ -715,7 +745,7 @@ input[type="range"] {
 .metric span {
   color: var(--muted);
   font-size: 0.78rem;
-  font-weight: 850;
+  font-weight: 800;
 }
 
 .metric-label-row .info-button {
@@ -795,7 +825,7 @@ input[type="range"] {
   pointer-events: none;
   transition: opacity 140ms ease;
   font-size: 0.8rem;
-  font-weight: 900;
+  font-weight: 800;
 }
 
 .clickable-graph-hero:hover::after,
@@ -879,7 +909,7 @@ input[type="range"] {
 .preview-head {
   color: var(--muted);
   font-size: 0.74rem;
-  font-weight: 900;
+  font-weight: 800;
 }
 
 .preview-head strong,
@@ -904,7 +934,7 @@ input[type="range"] {
   background: var(--panel);
   cursor: pointer;
   font-size: 0.7rem;
-  font-weight: 900;
+  font-weight: 800;
 }
 
 .graph-plus {
@@ -919,7 +949,7 @@ input[type="range"] {
   padding: 0 6px 8px;
   color: var(--muted);
   font-size: 0.78rem;
-  font-weight: 900;
+  font-weight: 800;
 }
 
 .graph-control-row {
@@ -1222,7 +1252,7 @@ details.graph-collapsible > summary::after {
   color: var(--muted);
   font-size: 0.72rem;
   line-height: 1.15;
-  font-weight: 850;
+  font-weight: 800;
 }
 
 .alignment-impact-pill strong {
@@ -1278,7 +1308,7 @@ details.graph-collapsible > summary::after {
   color: var(--ink);
   background: var(--panel-solid);
   cursor: pointer;
-  font-weight: 900;
+  font-weight: 800;
   font-size: 0.78rem;
 }
 
@@ -1338,7 +1368,7 @@ details.graph-collapsible > summary::after {
   padding: 0 12px;
   background: var(--panel-solid);
   font-size: 0.82rem;
-  font-weight: 900;
+  font-weight: 800;
 }
 
 .axis-choice input {
@@ -1412,7 +1442,7 @@ details.graph-collapsible > summary::after {
   color: var(--primary);
   background: color-mix(in srgb, var(--primary) 8%, transparent);
   font-size: 0.72rem;
-  font-weight: 900;
+  font-weight: 800;
   white-space: nowrap;
 }
 
@@ -1449,7 +1479,7 @@ details.graph-collapsible > summary::after {
 }
 
 .kv span:last-child {
-  font-weight: 900;
+  font-weight: 800;
   text-align: right;
 }
 
@@ -1505,6 +1535,40 @@ th {
   line-height: 1.55;
 }
 
+.docs-page,
+.docs-intro,
+.docs-section,
+.docs-card {
+  max-width: 1120px;
+}
+
+.docs-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.docs-card,
+.docs-section {
+  display: grid;
+  align-content: start;
+  gap: 10px;
+}
+
+.docs-card p,
+.docs-intro p,
+.docs-section li {
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.docs-section ul {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding-left: 20px;
+}
+
 .contact-card {
   display: grid;
   gap: 24px;
@@ -1532,7 +1596,7 @@ th {
   background: #ffd33d;
   color: #252525;
   font-size: clamp(1.4rem, 4vw, 2.6rem);
-  font-weight: 950;
+  font-weight: 800;
   letter-spacing: 0;
 }
 
@@ -1610,7 +1674,7 @@ th {
 .contact-data dt {
   color: #aab2bd;
   font-size: 0.72rem;
-  font-weight: 900;
+  font-weight: 800;
   text-transform: uppercase;
 }
 
@@ -1716,7 +1780,7 @@ th {
   background: var(--panel-solid);
   cursor: pointer;
   font-size: 0.78rem;
-  font-weight: 900;
+  font-weight: 800;
 }
 
 .wizard-step span {
@@ -1936,7 +2000,7 @@ th {
   color: inherit;
   background: transparent;
   font-size: 0.82rem;
-  font-weight: 850;
+  font-weight: 800;
   text-align: left;
 }
 
@@ -2023,8 +2087,142 @@ th {
 .notes-output {
   min-height: 280px;
   margin: 12px 0;
-  font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+  font-family: inherit;
   font-size: 0.78rem;
+}
+
+.lasercoach-grid {
+  display: grid;
+  grid-template-columns: minmax(430px, 0.9fr) minmax(520px, 1.1fr);
+  gap: 18px;
+  align-items: start;
+}
+
+.lasercoach-wizard-steps {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.lasercoach-step-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 380px);
+  gap: 18px;
+  align-items: start;
+}
+
+.lasercoach-three {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  align-items: end;
+}
+
+.lasercoach-svg-input {
+  min-height: 190px;
+  font-family: inherit;
+  font-size: 0.78rem;
+}
+
+.lasercoach-results-rail {
+  position: sticky;
+  top: 14px;
+  max-height: calc(100vh - 28px);
+  overflow: auto;
+  padding-right: 2px;
+}
+
+.lasercoach-step-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.lasercoach-inline-button {
+  align-self: end;
+}
+
+.lasercoach-upload-panel {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+}
+
+.lasercoach-upload-panel h2 {
+  overflow-wrap: anywhere;
+}
+
+.lasercoach-file-kind {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  min-width: 54px;
+  min-height: 32px;
+  padding: 4px 10px;
+  border: 1px solid color-mix(in srgb, var(--primary) 38%, var(--line));
+  border-radius: 999px;
+  color: var(--primary);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0;
+  text-transform: uppercase;
+  background: color-mix(in srgb, var(--primary) 10%, transparent);
+}
+
+.lasercoach-factor-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.lasercoach-factor-card {
+  align-content: start;
+  gap: 7px;
+  background: color-mix(in srgb, var(--primary) 5%, var(--panel-solid));
+}
+
+.lasercoach-factor-card h2 {
+  color: var(--primary);
+}
+
+.lasercoach-readouts {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.lasercoach-kv-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 14px;
+}
+
+.lasercoach-results-rail .lasercoach-kv-grid {
+  grid-template-columns: 1fr;
+}
+
+.lasercoach-results-rail .lasercoach-kv-grid .kv span:first-child {
+  flex: 0 0 76px;
+  overflow-wrap: normal;
+}
+
+.lasercoach-kv-grid .kv {
+  min-width: 0;
+}
+
+.lasercoach-kv-grid .kv span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.lasercoach-kv-grid .kv span:first-child {
+  flex: 1 1 auto;
+}
+
+.lasercoach-kv-grid .kv span:last-child {
+  flex: 0 1 auto;
+}
+
+.lasercoach-tool .mini-panel {
+  margin-top: 0;
 }
 
 @media (max-width: 1380px) {
@@ -2051,7 +2249,9 @@ th {
     grid-template-columns: 1fr;
   }
 
-  .axis-grid {
+  .axis-grid,
+  .lasercoach-step-layout,
+  .lasercoach-results-rail {
     position: static;
     max-height: none;
     overflow: visible;
@@ -2153,8 +2353,13 @@ th {
 
   .field-row,
   .readouts,
+  .docs-grid,
   .panels,
   .kerf-three-column-row,
+  .lasercoach-three,
+  .lasercoach-grid,
+  .lasercoach-factor-grid,
+  .lasercoach-step-layout,
   .toolbar,
   .spot-source-toolbar,
   .spot-source-row,
@@ -2228,6 +2433,16 @@ th {
 
   .axis-status-readouts {
     grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .lasercoach-readouts,
+  .lasercoach-kv-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .lasercoach-upload-panel {
+    align-items: flex-start;
+    flex-direction: column;
   }
 
   .spot-tool .optic-split {

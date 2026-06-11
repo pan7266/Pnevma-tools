@@ -51,6 +51,8 @@ export const el: LocalePack = {
     axisToolMeta: "Μικροβήματα, DPI, μοτέρ, καθαρή γραμμή",
     kerfToolName: "Kerf & βάθος εστίασης",
     kerfToolMeta: "Θέση waist, kerf υλικού, σημειώσεις LightBurn",
+    laserCoachToolName: "Triple Factor Laser Coach",
+    laserCoachToolMeta: "Machine, optics, vector, feedback",
     light: "Φωτεινό",
     dark: "Σκοτεινό",
     metric: "Μετρικό",

@@ -50,6 +50,8 @@ export const de: LocalePack = {
     "axisToolMeta": "Mikroschritte, DPI, Motoren, Linienfit",
     "kerfToolName": "Kerf & Fokustiefe",
     "kerfToolMeta": "Fokuslage, Materialkerf, LightBurn-Notizen",
+    "laserCoachToolName": "Triple-Faktor-Lasercoach",
+    "laserCoachToolMeta": "Maschine, Optik, Vektor, Feedback",
     "light": "Hell",
     "dark": "Dunkel",
     "metric": "Metrisch",

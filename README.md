@@ -9,6 +9,7 @@ Owner: Pnevma.
 - CO2 Laser Spot Diameter Calculator: source presets, lens shape, finish comparison, mirror path losses, alignment, smoke/extraction, beam expander checks, and inline SVG graphs.
 - Laser Axis Line Interval Calculator: motor microsteps, controller steps/mm, linked DPI/line interval inputs, clean interval checks, spot overlap, and inline SVG interval graph.
 - CO2 Laser Kerf & Focus Depth Advisor: imports the saved optical profile from the Spot calculator, recommends focus depth by material/operation/quality goal, explains optical beam-through-material behavior, supports kerf calibration, and saves custom material profiles in localStorage.
+- Triple Factor Laser Coach: analyzes SVG vector geometry, combines material presets with absolute machine motion and optics values, recommends speed/power/passes, and learns machine/material corrections from user feedback without mutating machine motion settings.
 
 ## Install
 
@@ -46,6 +47,20 @@ npm run test
 - `GET /api/spot/options`: returns Spot calculator defaults and optical option presets.
 - `GET /api/axis/motors`: returns structured axis motor presets.
 - `GET /api/kerf/materials`: returns Kerf Advisor material, operation, quality-goal, calibration, and default optical-profile data.
+- `GET /api/lasercoach/options`: returns Triple Factor Laser Coach seed machine, motion, material, operation, quality, air assist, and feedback options.
+- `GET|POST /api/lasercoach/machines`: lists or creates/updates laser machines.
+- `GET|PATCH|DELETE /api/lasercoach/machines/:id`: reads, updates, or deletes a laser machine.
+- `GET|POST /api/lasercoach/motion-profiles`: lists or creates/updates machine motion profiles.
+- `GET|PATCH|DELETE /api/lasercoach/motion-profiles/:id`: reads, updates, or deletes a motion profile.
+- `GET|POST /api/lasercoach/materials`: lists or creates/updates materials.
+- `GET|PATCH|DELETE /api/lasercoach/materials/:id`: reads, updates, or deletes a material.
+- `GET|POST /api/lasercoach/operation-presets`: lists or creates/updates operation presets.
+- `GET|PATCH|DELETE /api/lasercoach/operation-presets/:id`: reads, updates, or deletes an operation preset.
+- `POST /api/lasercoach/vector/analyze`: accepts SVG text, stores a sanitized server-runtime copy, and returns a vector job plus analysis.
+- `POST /api/lasercoach/recommendations`: creates a deterministic recommendation from stored machine, motion, material, preset, analysis, and correction data.
+- `POST /api/lasercoach/feedback`: stores job feedback and updates only `MachineMaterialCorrection`.
+- `GET /api/lasercoach/corrections`: reads correction profiles, optionally filtered by machine/material/operation.
+- `GET /api/lasercoach/export` and `POST /api/lasercoach/import`: export/import machine profiles, material presets, and corrections as JSON.
 - `POST /api/admin/logs`: authenticated read-only request-log view used by `/admin`.
 
 The API routes are thin wrappers. Calculator math lives in `lib/calculators`.
@@ -75,6 +90,7 @@ For current Next.js versions, static export is configured through `output: "expo
 - The old iframe and `postMessage` workspace was replaced with direct React routes and shared settings context.
 - Graphs remain inline SVG. No charting library is used.
 - No GraphQL, database, Tailwind, shadcn/ui, browser Babel, UMD React scripts, iframe, or charting package is included. Authentication is limited to the read-only `/admin` request-log panel.
+- Triple Factor Laser Coach server routes use a local `.lasercoach-store` JSON file when a Next.js runtime is available; the browser UI also keeps data in localStorage for static-export compatibility.
 - CO2 lamp/source detail links now prefer official manufacturer pages, manuals, or datasheets where available, including RECI, SPT, EFR, LaserLife, Novanta SYNRAD, Coherent, and Luxinar sources.
 - The Spot calculator includes live calculation, sticky readouts, collapsible graph sections, optical-path visualization, focal-length presets up to 228.6 mm plus custom focal length input, and a rough spot-temperature estimate shown as a thermal index.
 - The Kerf Advisor imports the Spot optical profile, explains measured spot/kerf, Rayleigh range, focus depth, taper tendency, confidence, and calibration workflows with inline SVG diagrams.
