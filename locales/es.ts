@@ -1,3 +1,4 @@
+import { QR_LOCALES } from "@/lib/data/qr-i18n";
 import type { LocalePack } from "@/locales/types";
 
 export const es: LocalePack = {
@@ -50,11 +51,14 @@ export const es: LocalePack = {
     "axisToolMeta": "Micropasos, DPI, motores, línea limpia",
     "kerfToolName": "Kerf y profundidad de foco",
     "kerfToolMeta": "Cintura de foco, kerf, notas LightBurn",
+    "qrToolName": "Escaner de codigos QR",
+    "qrToolMeta": "Camara, imagen, pegar y texto",
     "light": "Claro",
     "dark": "Oscuro",
     "metric": "Métrico",
     "imperial": "Imperial"
   },
+  "qr": QR_LOCALES.es,
   "spot": {
     "title": "Calculadora de diámetro de punto láser CO2",
     "subtitle": "Tubo de vidrio CO2 preestablecido y biblioteca de fuentes RF, forma de lente, comparación de acabados, verificación de recorte y gráfico puntual vatio por vatio.",

@@ -21,6 +21,7 @@ export interface LegalCopy {
 
 export interface LocalePack {
   common: TextDictionary;
+  qr: TextDictionary;
   spot: WidenText<typeof SPOT_TEXT.en>;
   spotInfo: WidenText<typeof SPOT_INFO.en>;
   axis: WidenText<typeof AXIS_TEXT.en>;

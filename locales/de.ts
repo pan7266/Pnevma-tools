@@ -1,3 +1,4 @@
+import { QR_LOCALES } from "@/lib/data/qr-i18n";
 import type { LocalePack } from "@/locales/types";
 
 export const de: LocalePack = {
@@ -50,11 +51,14 @@ export const de: LocalePack = {
     "axisToolMeta": "Mikroschritte, DPI, Motoren, Linienfit",
     "kerfToolName": "Kerf & Fokustiefe",
     "kerfToolMeta": "Fokuslage, Materialkerf, LightBurn-Notizen",
+    "qrToolName": "QR-Code-Scanner",
+    "qrToolMeta": "Kamera, Upload, Einfuegen, Text",
     "light": "Hell",
     "dark": "Dunkel",
     "metric": "Metrisch",
     "imperial": "Imperial"
   },
+  "qr": QR_LOCALES.de,
   "spot": {
     "title": "CO2-Laser Spotdurchmesser-Rechner",
     "subtitle": "Voreingestellte CO2-Glasröhren- und RF-Quellenbibliothek, Linsenform, Oberflächenvergleich, Clipping-Prüfung und Watt-für-Watt-Spotdiagramm.",
