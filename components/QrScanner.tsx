@@ -64,6 +64,8 @@ const FIELD_LABEL_KEYS: Record<string, string> = {
   Number: "fieldNumber",
   Message: "fieldMessage",
   Name: "fieldName",
+  "First name": "fieldFirstName",
+  "Last name": "fieldLastName",
   Organization: "fieldOrganization",
   Phone: "fieldPhone",
   Email: "fieldEmail",
