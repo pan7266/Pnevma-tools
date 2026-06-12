@@ -290,6 +290,69 @@ function parsePhone(raw: string): ParsedQrPayload | undefined {
   };
 }
 
+function cleanContactNamePart(value: string) {
+  return value.replace(/\s+/g, " ").trim();
+}
+
+function compactDisplayName(parts: string[]) {
+  return parts.map(cleanContactNamePart).filter(Boolean).join(" ");
+}
+
+function meCardNameFields(rawName: string): { displayName: string; fields: QrField[] } {
+  const trimmed = cleanContactNamePart(rawName);
+  if (!trimmed) return { displayName: "", fields: [] };
+
+  if (!trimmed.includes(",")) {
+    return { displayName: trimmed, fields: [{ label: "Name", value: trimmed }] };
+  }
+
+  const [lastName = "", firstName = "", ...rest] = trimmed.split(",").map(cleanContactNamePart);
+  const extra = compactDisplayName(rest);
+
+  if (firstName && lastName) {
+    return {
+      displayName: compactDisplayName([firstName, extra, lastName]),
+      fields: [
+        { label: "First name", value: firstName },
+        { label: "Last name", value: lastName },
+      ],
+    };
+  }
+
+  const displayName = compactDisplayName([firstName, lastName, extra]);
+  return {
+    displayName,
+    fields: displayName ? [{ label: "Name", value: displayName }] : [],
+  };
+}
+
+function vCardNameFields(rawName: string): { displayName: string; fields: QrField[] } {
+  const trimmed = cleanContactNamePart(rawName);
+  if (!trimmed) return { displayName: "", fields: [] };
+
+  if (!trimmed.includes(";")) {
+    return { displayName: trimmed, fields: [{ label: "Name", value: trimmed }] };
+  }
+
+  const [lastName = "", firstName = "", additional = "", prefix = "", suffix = ""] = trimmed.split(";").map(cleanContactNamePart);
+  const displayName = compactDisplayName([prefix, firstName, additional, lastName, suffix]);
+
+  if (firstName && lastName) {
+    return {
+      displayName,
+      fields: [
+        { label: "First name", value: firstName },
+        { label: "Last name", value: lastName },
+      ],
+    };
+  }
+
+  return {
+    displayName,
+    fields: displayName ? [{ label: "Name", value: displayName }] : [],
+  };
+}
+
 function parseVCard(raw: string): ParsedQrPayload | undefined {
   if (!raw.toUpperCase().includes("BEGIN:VCARD")) return undefined;
 
@@ -298,7 +361,9 @@ function parseVCard(raw: string): ParsedQrPayload | undefined {
     const line = lines.find((entry) => entry.toUpperCase().startsWith(prefix));
     return line ? line.slice(line.indexOf(":") + 1).trim() : "";
   };
-  const name = pick("FN:") || pick("N:");
+  const formattedName = pick("FN:");
+  const structuredName = vCardNameFields(pick("N:"));
+  const name = formattedName || structuredName.displayName;
   const organization = pick("ORG:");
   const phone = pick("TEL");
   const email = pick("EMAIL");
@@ -310,7 +375,7 @@ function parseVCard(raw: string): ParsedQrPayload | undefined {
     title: "Contact card",
     summary: name || organization || email || phone || "Contact",
     fields: [
-      ...(name ? [{ label: "Name", value: name }] : []),
+      ...(formattedName ? [{ label: "Name", value: formattedName }, ...structuredName.fields] : structuredName.fields),
       ...(organization ? [{ label: "Organization", value: organization }] : []),
       ...(phone ? [{ label: "Phone", value: phone }] : []),
       ...(email ? [{ label: "Email", value: email }] : []),
@@ -324,7 +389,7 @@ function parseMeCard(raw: string): ParsedQrPayload | undefined {
   if (!raw.toUpperCase().startsWith("MECARD:")) return undefined;
 
   const fields = parseEscapedFields(raw.slice(7));
-  const name = fields.N || "";
+  const name = meCardNameFields(fields.N || "");
   const phone = fields.TEL || "";
   const email = fields.EMAIL || "";
   const website = fields.URL || "";
@@ -333,9 +398,9 @@ function parseMeCard(raw: string): ParsedQrPayload | undefined {
   return {
     type: "Contact",
     title: "Contact card",
-    summary: name || email || phone || "Contact",
+    summary: name.displayName || email || phone || "Contact",
     fields: [
-      ...(name ? [{ label: "Name", value: name }] : []),
+      ...name.fields,
       ...(phone ? [{ label: "Phone", value: phone }] : []),
       ...(email ? [{ label: "Email", value: email }] : []),
       ...(website ? [{ label: "Website", value: website }] : []),
