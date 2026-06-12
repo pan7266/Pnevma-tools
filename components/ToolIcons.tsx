@@ -41,3 +41,13 @@ export function KerfIcon() {
     </svg>
   );
 }
+
+export function QrIcon() {
+  return (
+    <svg viewBox="0 0 64 64" aria-hidden="true">
+      <path d="M12 12h14v14H12V12Zm26 0h14v14H38V12ZM12 38h14v14H12V38Z" fill="none" stroke="#66a3ff" strokeWidth="4" strokeLinejoin="round" />
+      <path d="M40 40h6v-6h6v12h-6v6H34V40h6Z" fill="none" stroke="#ff6b6f" strokeWidth="4" strokeLinejoin="round" />
+      <path d="M18 18h2M44 18h2M18 44h2M34 32h6M32 20h2M50 50h2" stroke="#f5b45b" strokeWidth="4" strokeLinecap="round" />
+    </svg>
+  );
+}

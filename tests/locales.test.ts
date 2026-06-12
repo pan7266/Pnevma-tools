@@ -61,6 +61,16 @@ const allowedSameValues = new Set([
   "IP",
   "URL",
   "User-agent",
+  "Instagram",
+  "Facebook",
+  "LinkedIn",
+  "YouTube",
+  "TikTok",
+  "WhatsApp",
+  "Telegram",
+  "Wi-Fi",
+  "SMS",
+  "SVG",
 ]);
 
 const allowedSamePaths = new Set([

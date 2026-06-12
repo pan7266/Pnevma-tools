@@ -1,4 +1,5 @@
 import { AXIS_TEXT, SPOT_INFO, SPOT_TEXT } from "@/lib/data/i18n";
+import { QR_LOCALES } from "@/lib/data/qr-i18n";
 import type { LocalePack } from "@/locales/types";
 
 export const en: LocalePack = {
@@ -51,11 +52,14 @@ export const en: LocalePack = {
     axisToolMeta: "Microsteps, DPI, motor presets, line fit",
     kerfToolName: "Kerf & Focus Depth",
     kerfToolMeta: "Focus waist, material kerf, LightBurn notes",
+    qrToolName: "QR Code Scanner",
+    qrToolMeta: "Camera, upload, paste, decoded text",
     light: "Light",
     dark: "Dark",
     metric: "Metric",
     imperial: "Imperial",
   },
+  qr: QR_LOCALES.en,
   spot: {
     ...SPOT_TEXT.en,
     lampCalibration: "Lamp calibration",

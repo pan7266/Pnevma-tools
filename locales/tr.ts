@@ -1,3 +1,4 @@
+import { QR_LOCALES } from "@/lib/data/qr-i18n";
 import type { LocalePack } from "@/locales/types";
 
 export const tr: LocalePack = {
@@ -50,11 +51,14 @@ export const tr: LocalePack = {
     "axisToolMeta": "Mikroadım, DPI, motorlar, temiz çizgi",
     "kerfToolName": "Kerf ve odak derinliği",
     "kerfToolMeta": "Odak beli, malzeme kerfi, LightBurn notları",
+    "qrToolName": "QR kod tarayici",
+    "qrToolMeta": "Kamera, yukleme, yapistirma, metin",
     "light": "Açık",
     "dark": "Koyu",
     "metric": "Metrik",
     "imperial": "İngiliz birimleri"
   },
+  "qr": QR_LOCALES.tr,
   "spot": {
     "title": "CO2 lazer nokta çapı hesaplayıcı",
     "subtitle": "Ön ayarlı CO2 cam tüp ve RF kaynak kitaplığı, lens şekli, bitiş karşılaştırması, kırpma kontrolü ve watt-watt nokta grafiği.",

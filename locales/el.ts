@@ -1,4 +1,5 @@
 import { AXIS_TEXT, SPOT_INFO, SPOT_TEXT } from "@/lib/data/i18n";
+import { QR_LOCALES } from "@/lib/data/qr-i18n";
 import type { LocalePack } from "@/locales/types";
 
 export const el: LocalePack = {
@@ -51,11 +52,14 @@ export const el: LocalePack = {
     axisToolMeta: "Μικροβήματα, DPI, μοτέρ, καθαρή γραμμή",
     kerfToolName: "Kerf & βάθος εστίασης",
     kerfToolMeta: "Θέση waist, kerf υλικού, σημειώσεις LightBurn",
+    qrToolName: "Σαρωτής QR code",
+    qrToolMeta: "Κάμερα, εικόνα, επικόλληση, κείμενο",
     light: "Φωτεινό",
     dark: "Σκοτεινό",
     metric: "Μετρικό",
     imperial: "Imperial",
   },
+  qr: QR_LOCALES.el,
   spot: {
     ...SPOT_TEXT.el,
     lampCalibration: "Βαθμονόμηση λάμπας",

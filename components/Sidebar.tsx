@@ -5,33 +5,40 @@ import { usePathname } from "next/navigation";
 import { useAppSettings } from "@/components/AppSettings";
 import { LanguageToggle } from "@/components/LanguageToggle";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { AxisIcon, KerfIcon, PnevmaMark, SpotIcon } from "@/components/ToolIcons";
+import { AxisIcon, KerfIcon, PnevmaMark, QrIcon, SpotIcon } from "@/components/ToolIcons";
 import { UnitToggle } from "@/components/UnitToggle";
 import { getLocale } from "@/locales";
 
 function getTools(labels: Record<string, string>) {
   return [
-  {
-    href: "/spot",
-    key: "spot",
-    name: labels.spotToolName,
-    meta: labels.spotToolMeta,
-    icon: <SpotIcon />,
-  },
-  {
-    href: "/axis",
-    key: "axis",
-    name: labels.axisToolName,
-    meta: labels.axisToolMeta,
-    icon: <AxisIcon />,
-  },
-  {
-    href: "/kerf",
-    key: "kerf",
-    name: labels.kerfToolName,
-    meta: labels.kerfToolMeta,
-    icon: <KerfIcon />,
-  },
+    {
+      href: "/spot",
+      key: "spot",
+      name: labels.spotToolName,
+      meta: labels.spotToolMeta,
+      icon: <SpotIcon />,
+    },
+    {
+      href: "/axis",
+      key: "axis",
+      name: labels.axisToolName,
+      meta: labels.axisToolMeta,
+      icon: <AxisIcon />,
+    },
+    {
+      href: "/kerf",
+      key: "kerf",
+      name: labels.kerfToolName,
+      meta: labels.kerfToolMeta,
+      icon: <KerfIcon />,
+    },
+    {
+      href: "/qr",
+      key: "qr",
+      name: labels.qrToolName,
+      meta: labels.qrToolMeta,
+      icon: <QrIcon />,
+    },
   ];
 }
 
