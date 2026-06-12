@@ -48,6 +48,25 @@ describe("QR payload parser", () => {
     expect(parseQrPayload("5201234567890").type).toBe("Product");
   });
 
+  it("splits MECARD first and last names instead of showing the raw comma value", () => {
+    const parsed = parseQrPayload("MECARD:N:last,first;ADR:address;TEL:phone;EMAIL:email ;NOTE:nore;URL:url;;");
+
+    expect(parsed.type).toBe("Contact");
+    expect(parsed.summary).toBe("first last");
+    expect(parsed.fields).toContainEqual({ label: "First name", value: "first" });
+    expect(parsed.fields).toContainEqual({ label: "Last name", value: "last" });
+    expect(parsed.fields).not.toContainEqual({ label: "Name", value: "last,first" });
+  });
+
+  it("removes leading commas from MECARD organization-style names", () => {
+    const parsed = parseQrPayload("MECARD:N:,The Laser Lab;ADR:Ypsilanton 44;TEL:6947123120;EMAIL:sales@thelaserlab.gr;;");
+
+    expect(parsed.type).toBe("Contact");
+    expect(parsed.summary).toBe("The Laser Lab");
+    expect(parsed.fields).toContainEqual({ label: "Name", value: "The Laser Lab" });
+    expect(parsed.fields).not.toContainEqual({ label: "Name", value: ",The Laser Lab" });
+  });
+
   it("can regenerate decoded content as SVG", async () => {
     const parsed = parseQrPayload("https://www.instagram.com/pnevma_gifts/");
     const svg = await QRCode.toString(parsed.safeUrl || parsed.summary, { type: "svg", width: 512, margin: 2 });
