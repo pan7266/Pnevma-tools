@@ -44,8 +44,7 @@
       gap: 16px;
     }
 
-    .toolbar,
-    .viewer {
+    .toolbar {
       border: 1px solid var(--line);
       background: var(--panel);
       border-radius: 8px;
@@ -176,14 +175,25 @@
     }
 
     .viewer {
+      width: 100%;
       min-height: 68vh;
-      overflow: hidden;
+      overflow: visible;
+      background: #fff;
+    }
+
+    body.is-unlocked {
+      background: #fff;
+    }
+
+    body.is-unlocked .shell {
+      width: min(1180px, calc(100vw - 32px));
+      padding-bottom: 12px;
     }
 
     iframe {
       display: block;
       width: 100%;
-      min-height: 68vh;
+      min-height: calc(100vh - 130px);
       border: 0;
       background: #fff;
     }
@@ -234,11 +244,12 @@
       <p class="status" id="status" role="status" aria-live="polite">Enter the passphrase to unlock both pages.</p>
     </section>
 
-    <section class="viewer" id="viewer" aria-label="Decrypted page preview" hidden>
-      <div class="empty" id="emptyState" hidden>No page unlocked.</div>
-      <iframe id="preview" title="Decrypted protected HTML preview" sandbox="allow-downloads allow-forms allow-modals allow-popups allow-scripts" hidden></iframe>
-    </section>
   </main>
+
+  <div class="viewer" id="viewer" aria-label="Decrypted page preview" hidden>
+    <div class="empty" id="emptyState" hidden>No page unlocked.</div>
+    <iframe id="preview" title="Decrypted protected HTML preview" sandbox="allow-downloads allow-forms allow-modals allow-popups allow-scripts" hidden></iframe>
+  </div>
 
   <script>
     const PROTECTED_PAGES = [
@@ -372,6 +383,7 @@
       activePageId = pageId;
       preview.srcdoc = decryptedPages.get(pageId);
       preview.title = page ? page.label : 'Decrypted protected HTML preview';
+      document.body.classList.add('is-unlocked');
       viewer.hidden = false;
       emptyState.hidden = true;
       preview.hidden = false;
@@ -409,6 +421,7 @@
     function resetPreview() {
       decryptedPages.clear();
       activePageId = PROTECTED_PAGES[0] ? PROTECTED_PAGES[0].id : '';
+      document.body.classList.remove('is-unlocked');
       viewer.hidden = true;
       preview.hidden = true;
       preview.removeAttribute('srcdoc');
