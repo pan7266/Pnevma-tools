@@ -23,6 +23,10 @@
       box-sizing: border-box;
     }
 
+    [hidden] {
+      display: none !important;
+    }
+
     body {
       margin: 0;
       min-height: 100vh;
@@ -49,9 +53,9 @@
     }
 
     .toolbar {
-      padding: 18px;
+      padding: 16px;
       display: grid;
-      gap: 14px;
+      gap: 10px;
     }
 
     .heading {
@@ -75,7 +79,7 @@
 
     .fields {
       display: grid;
-      grid-template-columns: minmax(220px, 1fr) minmax(260px, 2fr) auto auto;
+      grid-template-columns: minmax(260px, 1fr) auto auto;
       align-items: end;
       gap: 12px;
     }
@@ -134,6 +138,28 @@
       border-color: var(--line);
     }
 
+    .page-menu {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      gap: 8px;
+    }
+
+    .page-tab {
+      min-height: 32px;
+      border-color: var(--line);
+      background: #fff;
+      color: var(--ink);
+      padding: 0 12px;
+      font-size: 13px;
+    }
+
+    .page-tab.active {
+      border-color: var(--accent);
+      background: var(--accent);
+      color: #fff;
+    }
+
     .status {
       min-height: 20px;
       margin: 0;
@@ -177,7 +203,11 @@
       }
 
       .heading {
-        display: block;
+        display: grid;
+      }
+
+      .page-menu {
+        justify-content: flex-start;
       }
     }
   </style>
@@ -190,24 +220,22 @@
           <h1>Protected Pnevma HTML</h1>
           <p class="meta">Encrypted static pages. The passphrase is not stored in this file.</p>
         </div>
-        <p class="meta" id="pageMeta"></p>
+        <nav class="page-menu" id="pageMenu" aria-label="Unlocked page menu" hidden></nav>
       </div>
+      <p class="meta" id="pageMeta"></p>
 
-      <div class="fields">
-        <label for="pageSelect">Page
-          <select id="pageSelect"></select>
-        </label>
+      <div class="fields" id="unlockForm">
         <label for="passphrase">Passphrase
           <input id="passphrase" type="password" autocomplete="current-password" spellcheck="false">
         </label>
         <button class="primary" id="unlock" type="button">Unlock</button>
         <button class="secondary" id="clear" type="button">Clear</button>
       </div>
-      <p class="status" id="status" role="status" aria-live="polite">Choose a page and enter the passphrase.</p>
+      <p class="status" id="status" role="status" aria-live="polite">Enter the passphrase to unlock both pages.</p>
     </section>
 
-    <section class="viewer" aria-label="Decrypted page preview">
-      <div class="empty" id="emptyState">No page unlocked.</div>
+    <section class="viewer" id="viewer" aria-label="Decrypted page preview" hidden>
+      <div class="empty" id="emptyState" hidden>No page unlocked.</div>
       <iframe id="preview" title="Decrypted protected HTML preview" sandbox="allow-downloads allow-forms allow-modals allow-popups allow-scripts" hidden></iframe>
     </section>
   </main>
@@ -242,14 +270,18 @@
   }
 ];
 
-    const pageSelect = document.getElementById('pageSelect');
+    const pageMenu = document.getElementById('pageMenu');
+    const unlockForm = document.getElementById('unlockForm');
     const passphraseInput = document.getElementById('passphrase');
     const unlockButton = document.getElementById('unlock');
     const clearButton = document.getElementById('clear');
     const statusText = document.getElementById('status');
     const pageMeta = document.getElementById('pageMeta');
+    const viewer = document.getElementById('viewer');
     const preview = document.getElementById('preview');
     const emptyState = document.getElementById('emptyState');
+    const decryptedPages = new Map();
+    let activePageId = PROTECTED_PAGES[0] ? PROTECTED_PAGES[0].id : '';
 
     function setStatus(message, type) {
       statusText.textContent = message;
@@ -309,23 +341,88 @@
     }
 
     function selectedPage() {
-      return PROTECTED_PAGES.find((page) => page.id === pageSelect.value) || PROTECTED_PAGES[0];
+      return PROTECTED_PAGES.find((page) => page.id === activePageId) || PROTECTED_PAGES[0];
     }
 
     function updatePageMeta() {
       const page = selectedPage();
-      pageMeta.textContent = page ? page.originalFilename + ' | ' + Math.round(page.bytes / 1024) + ' KB encrypted' : '';
+      if (decryptedPages.size === 0) {
+        const totalBytes = PROTECTED_PAGES.reduce((sum, item) => sum + item.bytes, 0);
+        pageMeta.textContent = PROTECTED_PAGES.length + ' pages | ' + Math.round(totalBytes / 1024) + ' KB encrypted';
+        return;
+      }
+
+      pageMeta.textContent = page ? page.originalFilename : '';
+    }
+
+    function updateActiveTab() {
+      pageMenu.querySelectorAll('button').forEach((button) => {
+        const isActive = button.dataset.pageId === activePageId;
+        button.classList.toggle('active', isActive);
+        button.setAttribute('aria-current', isActive ? 'page' : 'false');
+      });
+    }
+
+    function showPage(pageId) {
+      if (!decryptedPages.has(pageId)) {
+        return;
+      }
+
+      const page = PROTECTED_PAGES.find((item) => item.id === pageId);
+      activePageId = pageId;
+      preview.srcdoc = decryptedPages.get(pageId);
+      preview.title = page ? page.label : 'Decrypted protected HTML preview';
+      viewer.hidden = false;
+      emptyState.hidden = true;
+      preview.hidden = false;
+      updateActiveTab();
+      updatePageMeta();
+    }
+
+    function renderPageMenu() {
+      pageMenu.replaceChildren();
+      PROTECTED_PAGES.forEach((page) => {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'page-tab';
+        button.dataset.pageId = page.id;
+        button.textContent = page.label;
+        button.addEventListener('click', () => {
+          showPage(page.id);
+        });
+        pageMenu.append(button);
+      });
+      const lockButton = document.createElement('button');
+      lockButton.type = 'button';
+      lockButton.className = 'page-tab';
+      lockButton.textContent = 'Lock';
+      lockButton.addEventListener('click', () => {
+        resetPreview();
+        setStatus('Locked. Enter the passphrase to unlock both pages.', null);
+        passphraseInput.focus();
+      });
+      pageMenu.append(lockButton);
+      pageMenu.hidden = false;
+      updateActiveTab();
     }
 
     function resetPreview() {
+      decryptedPages.clear();
+      activePageId = PROTECTED_PAGES[0] ? PROTECTED_PAGES[0].id : '';
+      viewer.hidden = true;
       preview.hidden = true;
       preview.removeAttribute('srcdoc');
       emptyState.hidden = false;
+      pageMenu.hidden = true;
+      pageMenu.replaceChildren();
+      unlockForm.hidden = false;
+      pageMeta.hidden = false;
+      statusText.hidden = false;
+      updatePageMeta();
     }
 
     async function unlock() {
       const passphrase = passphraseInput.value;
-      const page = selectedPage();
 
       if (!crypto.subtle) {
         setStatus('WebCrypto is unavailable. Open this page over HTTPS or localhost.', 'error');
@@ -339,34 +436,28 @@
       }
 
       unlockButton.disabled = true;
-      setStatus('Decrypting...', null);
+      setStatus('Decrypting both pages...', null);
 
       try {
-        const html = await decryptPage(page, passphrase);
-        preview.srcdoc = html;
-        emptyState.hidden = true;
-        preview.hidden = false;
-        setStatus('Unlocked: ' + page.label, 'ok');
+        const unlockedPages = await Promise.all(
+          PROTECTED_PAGES.map(async (page) => [page.id, await decryptPage(page, passphrase)])
+        );
+        decryptedPages.clear();
+        unlockedPages.forEach(([pageId, html]) => decryptedPages.set(pageId, html));
+        passphraseInput.value = '';
+        unlockForm.hidden = true;
+        renderPageMenu();
+        showPage(activePageId);
+        setStatus('Unlocked both pages.', 'ok');
+        pageMeta.hidden = true;
+        statusText.hidden = true;
       } catch (error) {
         resetPreview();
-        setStatus('Could not decrypt. Check the selected page and passphrase.', 'error');
+        setStatus('Could not decrypt. Check the passphrase.', 'error');
       } finally {
         unlockButton.disabled = false;
       }
     }
-
-    PROTECTED_PAGES.forEach((page) => {
-      const option = document.createElement('option');
-      option.value = page.id;
-      option.textContent = page.label;
-      pageSelect.append(option);
-    });
-
-    pageSelect.addEventListener('change', () => {
-      updatePageMeta();
-      resetPreview();
-      setStatus('Choose a page and enter the passphrase.', null);
-    });
 
     passphraseInput.addEventListener('keydown', (event) => {
       if (event.key === 'Enter') {
@@ -378,7 +469,7 @@
     clearButton.addEventListener('click', () => {
       passphraseInput.value = '';
       resetPreview();
-      setStatus('Cleared.', null);
+      setStatus('Cleared. Enter the passphrase to unlock both pages.', null);
       passphraseInput.focus();
     });
 

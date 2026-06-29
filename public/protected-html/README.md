@@ -1,6 +1,7 @@
 # Protected HTML artifacts
 
 This folder contains a static decrypting viewer for two Pnevma HTML documents. The plaintext HTML documents are not committed to the repository.
+One successful unlock decrypts both documents in the browser and exposes a compact header menu for switching between them.
 
 ## Included pages
 
