@@ -75,6 +75,22 @@ a {
   color: var(--primary);
 }
 
+.craft-route {
+  min-height: 100vh;
+  border: 0;
+  border-radius: 0;
+  overflow: hidden;
+  background: var(--panel-solid);
+}
+
+.craft-route-frame {
+  display: block;
+  width: 100%;
+  min-height: 100vh;
+  border: 0;
+  background: #fff;
+}
+
 .sr-only {
   position: absolute;
   width: 1px;

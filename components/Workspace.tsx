@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { MouseEvent, ReactNode } from "react";
+import { usePathname } from "next/navigation";
 import { AppSettingsProvider, useAppSettings } from "@/components/AppSettings";
 import { Sidebar } from "@/components/Sidebar";
 import { getLocale } from "@/locales";
@@ -16,8 +17,13 @@ export function Workspace({ children }: { children: ReactNode }) {
 
 function WorkspaceShell({ children }: { children: ReactNode }) {
   const { lang } = useAppSettings();
+  const pathname = usePathname();
   const labels = getLocale(lang).common;
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  if (pathname?.startsWith("/craft")) {
+    return <>{children}</>;
+  }
 
   function closeSidebarFromClick(event: MouseEvent<HTMLDivElement>) {
     if (!sidebarOpen) return;
