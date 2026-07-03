@@ -21,7 +21,7 @@ function WorkspaceShell({ children }: { children: ReactNode }) {
   const labels = getLocale(lang).common;
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  if (pathname?.startsWith("/craft")) {
+  if (pathname?.startsWith("/craft") || pathname?.startsWith("/internal")) {
     return <>{children}</>;
   }
 
