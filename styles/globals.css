@@ -75,7 +75,8 @@ a {
   color: var(--primary);
 }
 
-.craft-page {
+.craft-page,
+.internal-route {
   min-height: 100vh;
 }
 
@@ -200,6 +201,18 @@ a {
 
 .craft-status.error {
   color: #b42318;
+}
+
+.internal-route {
+  background: var(--panel-solid);
+}
+
+.internal-route-frame {
+  display: block;
+  width: 100%;
+  min-height: 100vh;
+  border: 0;
+  background: #fff;
 }
 
 @media (max-width: 720px) {
